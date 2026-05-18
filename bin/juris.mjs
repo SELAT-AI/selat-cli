@@ -20,11 +20,11 @@ import { fmt } from "../lib/ui.mjs";
 const USAGE = `${fmt.bold("juris")} — agent payment setup helper
 
 ${fmt.bold("Commands:")}
-  init                  Check Circle CLI auth, Agent Wallet, juris-pay, and config.
+  init                  Check skill, Circle auth, Agent Wallet, juris-pay, and config.
   run <intent>          Discover + rank + pay for an x402 service in one pipe.
   fund                  Top up your Circle Gateway balance.
   setup-policy          Set Circle spending limits (recommended before any deposit > $20).
-  doctor                Diagnose setup problems (PATH, auth, wallet, drip status).
+  doctor                Diagnose setup problems (skill, PATH, auth, wallet, config).
 
 ${fmt.bold("Options:")}
   --help, -h            Show this help.
