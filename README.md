@@ -35,7 +35,7 @@ You get a real paid API response. No API keys, no manually-acquired USDC, no sch
 |---|---|
 | `juris init` | Full bootstrap. Idempotent — safe to re-run. |
 | `juris run "<intent>"` | Discover + rank + pay in one pipe. Sugar for the skill's `rank.mjs --pick` payment plan. |
-| `juris fund [--chain ... --amount ...]` | Top up Gateway balance. Dry-runs first; requires explicit confirm. |
+| `juris fund [--chain ... --amount ... --method direct\|eco]` | Top up Gateway balance. Dry-runs first; requires explicit confirm. Use `--method eco` for gasless Eco deposits where supported. |
 | `juris setup-policy` | Set Circle spending caps on your Agent Wallet. Requires an email OTP (Circle's policy-write security). Recommended before any deposit > $20. |
 | `juris doctor` | Diagnose setup problems in one pass. Run when something looks off. |
 | `juris --help` | This page. |
