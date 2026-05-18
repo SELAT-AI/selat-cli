@@ -1,26 +1,25 @@
 # juris
 
-> **The one-line installer for Juris Agent Payments.**
+> **Setup helper and runner for Juris Agent Payments.**
 
 ```bash
-npx @myjuris/juris init
+juris init
 ```
 
 That command:
 
-1. Checks your `node`, `npm`, `git`.
-2. Installs the Circle CLI if missing.
+1. Checks your `node`.
+2. Checks that Circle CLI is installed.
 3. Walks you through Circle Agent Wallet login (one email + one OTP code).
 4. Creates wallets across all Circle-supported chains.
-5. Installs `juris-pay`.
-6. Installs the discovery skill (`MyJuris/juris-agent-payments`) into `~/.claude/skills/`.
-7. Writes `~/.config/juris-pay/.env` with your router URL and wallet address.
-8. Optionally claims a **2 USDC welcome drip** so your first paid call works.
+5. Checks whether `juris-pay` is on `PATH`.
+6. Writes `~/.config/juris-pay/.env` with your router URL and wallet address.
+7. Optionally claims a **2 USDC welcome drip** so your first paid call works.
 
 Then:
 
 ```bash
-npx @myjuris/juris run "summarize the latest news on gold prices"
+juris run "summarize the latest news on gold prices"
 ```
 
 You get a real paid API response. No API keys, no manually-acquired USDC, no scheme branching, no Unix-streams jargon.
@@ -44,7 +43,7 @@ You get a real paid API response. No API keys, no manually-acquired USDC, no sch
 - The **`juris-pay`** CLI ([MyJuris/juris-router/juris-pay](https://github.com/MyJuris/juris-router/tree/main/juris-pay)) — probe + sign + retry against the Juris Router, with direct/routed mode auto-detect.
 - The **discovery skill** ([MyJuris/juris-agent-payments](https://github.com/MyJuris/juris-agent-payments)) — federated catalog, intent ranking, payment-plan emission.
 
-It doesn't reimplement any of them — it just wires them together so a new user gets from `npx @myjuris/juris init` to their first paid response in under five minutes.
+It doesn't reimplement any of them — it just wires them together so a new user can get from `juris init` to their first paid response without hand-editing config files.
 
 ## Why bother
 
@@ -59,7 +58,7 @@ Without this wrapper, the setup ordeal is:
 7. Deposit it through Circle Gateway.
 8. *Then* try the canonical pipeline.
 
-`juris init` is one command that handles steps 1–5 and the welcome-drip path that elides 6–7 for the first 2 USDC. That's the difference between a tool senior engineers grudgingly adopt and a tool a hackathon participant gets running over coffee.
+`juris init` checks the required local tools, handles Circle login and wallet creation, and writes the config that `juris-pay` consumes. It does not install global dependencies on your behalf.
 
 ## Configuration
 
@@ -79,7 +78,7 @@ Override at runtime per call: `JURIS_ROUTER_URL=... juris run "..."`
 
 ## Status
 
-**v0.1.0 — scaffolding.** Init flow works against existing Circle CLI + juris-pay; welcome-drip step is stubbed (endpoint spec at [MyJuris/juris-router#6](https://github.com/MyJuris/juris-router/pull/6)). `juris-pay` not yet on npm — `juris init` falls back to printed manual-install instructions.
+**v0.1.0 — scaffolding.** Init flow works against existing Circle CLI + juris-pay; welcome-drip step is stubbed (endpoint spec at [MyJuris/juris-router#6](https://github.com/MyJuris/juris-router/pull/6)). `juris init` checks for `juris-pay` and prints guidance if it is not on `PATH`.
 
 ## License
 

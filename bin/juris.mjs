@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * juris — one-line installer + runner for Juris agent payments.
+ * juris — setup helper + runner for Juris agent payments.
  *
  * Usage:
- *   npx @myjuris/juris init
- *   npx @myjuris/juris run "<intent>"
- *   npx @myjuris/juris fund --chain base --amount 2
- *   npx @myjuris/juris setup-policy
- *   npx @myjuris/juris doctor
+ *   juris init
+ *   juris run "<intent>"
+ *   juris fund --chain base --amount 2
+ *   juris setup-policy
+ *   juris doctor
  */
 
 import { init } from "../lib/commands/init.mjs";
@@ -17,10 +17,10 @@ import { fund } from "../lib/commands/fund.mjs";
 import { setupPolicy } from "../lib/commands/setup-policy.mjs";
 import { fmt } from "../lib/ui.mjs";
 
-const USAGE = `${fmt.bold("juris")} — agent payments in one line
+const USAGE = `${fmt.bold("juris")} — agent payment setup helper
 
 ${fmt.bold("Commands:")}
-  init                  Set up Circle CLI auth, Agent Wallet, juris-pay, and config.
+  init                  Check Circle CLI auth, Agent Wallet, juris-pay, and config.
   run <intent>          Discover + rank + pay for an x402 service in one pipe.
   fund                  Top up your Circle Gateway balance.
   setup-policy          Set Circle spending limits (recommended before any deposit > $20).
@@ -31,9 +31,9 @@ ${fmt.bold("Options:")}
   --version, -v         Show version.
 
 ${fmt.bold("Examples:")}
-  npx @myjuris/juris init
-  npx @myjuris/juris run "summarize the latest news on gold prices"
-  npx @myjuris/juris fund --chain base --amount 2
+  juris init
+  juris run "summarize the latest news on gold prices"
+  juris fund --chain base --amount 2
 `;
 
 const VERSION = "0.1.0";
