@@ -4,7 +4,26 @@
 
 The package is `@myjuris/juris-cli`; it installs the `juris` command.
 
-First install the agent-payment skill. Then run:
+## Install
+
+Install from the GitHub repo:
+
+```bash
+git clone https://github.com/MyJuris/juris-cli /path/to/juris-cli
+cd /path/to/juris-cli
+npm install
+npm link
+```
+
+That exposes the `juris` command on your `PATH`.
+
+If the package has been published to npm, install it with:
+
+```bash
+npm install -g @myjuris/juris-cli
+```
+
+Then install the agent-payment skill and run:
 
 ```bash
 juris init
