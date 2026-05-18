@@ -31,7 +31,7 @@ You get a real paid API response. No API keys, no manually-acquired USDC, no sch
 | Command | What it does |
 |---|---|
 | `juris init` | Full bootstrap. Idempotent — safe to re-run. |
-| `juris run "<intent>"` | Discover + rank + pay in one pipe. Sugar for the skill's `rank.mjs --pick \| jq \| sh` canonical flow. |
+| `juris run "<intent>"` | Discover + rank + pay in one pipe. Sugar for the skill's `rank.mjs --pick` payment plan. |
 | `juris fund [--chain ... --amount ...]` | Top up Gateway balance. Dry-runs first; requires explicit confirm. |
 | `juris setup-policy` | Set Circle spending caps on your Agent Wallet. Requires an email OTP (Circle's policy-write security). Recommended before any deposit > $20. |
 | `juris doctor` | Diagnose setup problems in one pass. Run when something looks off. |
@@ -58,7 +58,7 @@ Without this wrapper, the setup ordeal is:
 5. Write `~/.config/juris-pay/.env` by hand with router URL + wallet address.
 6. Acquire mainnet USDC.
 7. Deposit it through Circle Gateway.
-8. *Then* try the canonical pipeline.
+8. *Then* try the paid request flow.
 
 `juris init` checks the required local tools, handles Circle login and wallet creation, and writes the config that `juris-pay` consumes. It does not install global dependencies on your behalf.
 
