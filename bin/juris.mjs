@@ -5,7 +5,7 @@
  * Usage:
  *   juris init
  *   juris run "<intent>"
- *   juris fund --chain base --amount 2
+ *   juris fund --chain base --amount 2 [--method direct|eco]
  *   juris setup-policy
  *   juris doctor
  */
@@ -22,7 +22,7 @@ const USAGE = `${fmt.bold("juris")} — agent payment setup helper
 ${fmt.bold("Commands:")}
   init                  Check skill, Circle auth, Agent Wallet, juris-pay, and config.
   run <intent>          Discover + rank + pay for an x402 service in one pipe.
-  fund                  Top up your Circle Gateway balance.
+  fund                  Top up Gateway; --method eco supports Base by default.
   setup-policy          Set Circle spending limits (recommended before any deposit > $20).
   doctor                Diagnose setup problems (skill, PATH, auth, wallet, config).
 
@@ -34,6 +34,7 @@ ${fmt.bold("Examples:")}
   juris init
   juris run "summarize the latest news on gold prices"
   juris fund --chain base --amount 2
+  juris fund --chain base --amount 2 --method eco   # Base, no ETH gas needed
 `;
 
 const VERSION = "0.1.0";
