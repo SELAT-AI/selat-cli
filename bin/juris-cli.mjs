@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * juris — setup helper + runner for Juris agent payments.
+ * juris-cli — setup helper + runner for Juris agent payments.
  *
  * Usage:
- *   juris init
- *   juris run "<intent>"
- *   juris fund --chain base --amount 2
- *   juris setup-policy
- *   juris doctor
+ *   juris-cli init
+ *   juris-cli run "<intent>"
+ *   juris-cli fund --chain base --amount 2
+ *   juris-cli setup-policy
+ *   juris-cli doctor
  */
 
 import { init } from "../lib/commands/init.mjs";
@@ -17,7 +17,7 @@ import { fund } from "../lib/commands/fund.mjs";
 import { setupPolicy } from "../lib/commands/setup-policy.mjs";
 import { fmt } from "../lib/ui.mjs";
 
-const USAGE = `${fmt.bold("juris")} — agent payment setup helper
+const USAGE = `${fmt.bold("juris-cli")} — agent payment setup helper
 
 ${fmt.bold("Commands:")}
   init                  Check Circle CLI auth, Agent Wallet, juris-pay, and config.
@@ -31,9 +31,9 @@ ${fmt.bold("Options:")}
   --version, -v         Show version.
 
 ${fmt.bold("Examples:")}
-  juris init
-  juris run "summarize the latest news on gold prices"
-  juris fund --chain base --amount 2
+  juris-cli init
+  juris-cli run "summarize the latest news on gold prices"
+  juris-cli fund --chain base --amount 2
 `;
 
 const VERSION = "0.1.0";
