@@ -1,7 +1,7 @@
 {
-  "name": "@myjuris/juris",
+  "name": "@myjuris/juris-cli",
   "version": "0.1.0",
-  "description": "One-line installer + runner for Juris agent payments. Bundles Circle CLI, juris-pay, and config in a single npx flow.",
+  "description": "Setup helper and runner for Juris agent payments. Checks Circle CLI, juris-pay, and config without self-installing dependencies.",
   "type": "module",
   "bin": {
     "juris": "./bin/juris.mjs"
@@ -20,6 +20,7 @@
   ],
   "keywords": [
     "juris",
+    "juris-cli",
     "x402",
     "circle",
     "agent-payments",
