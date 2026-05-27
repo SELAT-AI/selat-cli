@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * juris — setup helper + runner for Juris agent payments.
+ * selat — setup helper + runner for SELAT agent payments.
  *
  * Usage:
- *   juris init
- *   juris run "<intent>"
- *   juris fund --chain base --amount 2 [--method direct|eco]
- *   juris setup-policy
- *   juris doctor
+ *   selat init
+ *   selat run "<intent>"
+ *   selat fund --chain base --amount 2 [--method direct|eco]
+ *   selat setup-policy
+ *   selat doctor
  */
 
 import { init } from "../lib/commands/init.mjs";
@@ -17,10 +17,10 @@ import { fund } from "../lib/commands/fund.mjs";
 import { setupPolicy } from "../lib/commands/setup-policy.mjs";
 import { fmt } from "../lib/ui.mjs";
 
-const USAGE = `${fmt.bold("juris")} — agent payment setup helper
+const USAGE = `${fmt.bold("selat")} — agent payment setup helper
 
 ${fmt.bold("Commands:")}
-  init                  Check skill, Circle auth, Agent Wallet, juris-pay, and config.
+  init                  Check skill, Circle auth, Agent Wallet, selat-pay, and config.
   run <intent>          Discover + rank + pay for an x402 service in one pipe.
   fund                  Top up Gateway; --method eco supports Base by default.
   setup-policy          Set Circle spending limits (recommended before any deposit > $20).
@@ -31,10 +31,10 @@ ${fmt.bold("Options:")}
   --version, -v         Show version.
 
 ${fmt.bold("Examples:")}
-  juris init
-  juris run "summarize the latest news on gold prices"
-  juris fund --chain base --amount 2
-  juris fund --chain base --amount 2 --method eco   # Base, no ETH gas needed
+  selat init
+  selat run "summarize the latest news on gold prices"
+  selat fund --chain base --amount 2
+  selat fund --chain base --amount 2 --method eco   # Base, no ETH gas needed
 `;
 
 const VERSION = "0.1.0";
@@ -74,6 +74,6 @@ main(process.argv)
   .then((code) => process.exit(code ?? 0))
   .catch((err) => {
     console.error(fmt.error(`fatal: ${err?.message ?? err}`));
-    if (process.env.JURIS_DEBUG === "1" && err?.stack) console.error(err.stack);
+    if (process.env.SELAT_DEBUG === "1" && err?.stack) console.error(err.stack);
     process.exit(1);
   });
