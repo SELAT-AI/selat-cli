@@ -59,6 +59,9 @@ jobs:
       - name: Dry-run pack
         run: npm pack --dry-run
 
+      - name: Upgrade npm (trusted publishing requires >=11.5.1)
+        run: npm install -g npm@latest
+
       - name: Publish
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry-run) }}
         run: npm publish
