@@ -14,7 +14,7 @@
     "@selat-ai/selat-pay": "^0.3.0"
   },
   "publishConfig": {
-    "access": "restricted"
+    "access": "public"
   },
   "engines": {
     "node": ">=18"
