@@ -13,6 +13,9 @@
   "dependencies": {
     "@selat-ai/selat-pay": "^0.1.0"
   },
+  "publishConfig": {
+    "access": "restricted"
+  },
   "engines": {
     "node": ">=18"
   },
