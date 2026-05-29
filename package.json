@@ -1,7 +1,7 @@
 {
   "name": "@selat-ai/selat-cli",
-  "version": "0.3.1",
-  "description": "Setup helper and runner for SELAT agent payments. Bundles selat-pay as a dependency; checks Circle CLI and config separately.",
+  "version": "0.4.0",
+  "description": "Setup helper and runner for SELAT agent payments. Bundles the selat-agent-payments skill and selat-pay as dependencies; checks Circle CLI and config separately.",
   "type": "module",
   "bin": {
     "selat": "./bin/selat.mjs"
@@ -11,6 +11,7 @@
     "start": "node bin/selat.mjs"
   },
   "dependencies": {
+    "@selat-ai/selat-agent-payments": "^0.6.0",
     "@selat-ai/selat-pay": "^0.3.0"
   },
   "publishConfig": {
