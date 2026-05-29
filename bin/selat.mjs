@@ -22,7 +22,7 @@ const USAGE = `${fmt.bold("selat")} — agent payment setup helper
 ${fmt.bold("Commands:")}
   init                  Check skill, Circle auth, Agent Wallet, selat-pay, and config.
   run <intent>          Discover + rank + pay for an x402 service in one pipe.
-  fund                  Top up Gateway; --method eco supports Base by default.
+  fund                  Top up Gateway; --method eco gasless from Base, Optimism, or Arbitrum → Polygon.
   setup-policy          Set Circle spending limits (recommended before any deposit > $20).
   doctor                Diagnose setup problems (skill, PATH, auth, wallet, config).
 
@@ -34,10 +34,10 @@ ${fmt.bold("Examples:")}
   selat init
   selat run "summarize the latest news on gold prices"
   selat fund --chain base --amount 2
-  selat fund --chain base --amount 2 --method eco   # Base, no ETH gas needed
+  selat fund --chain optimism --amount 2 --method eco   # gasless (Base/Optimism/Arbitrum), no ETH gas needed
 `;
 
-const VERSION = "0.2.0";
+const VERSION = "0.3.1";
 
 async function main(argv) {
   const [, , cmd, ...rest] = argv;
