@@ -103,7 +103,11 @@ Override at runtime per call: `SELAT_ROUTER_URL=... selat run "..."`
 
 ## Status
 
-**v0.1.0 — scaffolding.** Init flow works against existing agent-payment skill, Circle CLI, and selat-pay; welcome-drip step is stubbed (endpoint spec at [SELAT-AI/selat-router#6](https://github.com/SELAT-AI/selat-router/pull/6)). `selat init` checks for the skill and `selat-pay`, then prints guidance if either is missing.
+**Working beta.** `selat init` bootstraps a Circle Agent Wallet and writes the `selat-pay` config; it skips wallet creation when an agent wallet already exists (use `--force` to re-run). `selat run "<intent>"` discovers, ranks, and pays an x402 / MPP service end to end.
+
+The `selat-agent-payments` skill and `selat-pay` ship as npm dependencies, so `npm install -g @selat-ai/selat-cli` pulls everything — no separate skill install or repo clone needed. (`SELAT_SKILL_PATH`, or a local `~/.codex/skills` / `~/.claude/skills` checkout, still takes precedence if you're developing the skill.)
+
+The optional welcome-drip step is still stubbed pending the router endpoint (spec at [SELAT-AI/selat-router#6](https://github.com/SELAT-AI/selat-router/pull/6)).
 
 ## License
 
