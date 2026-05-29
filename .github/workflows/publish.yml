@@ -8,8 +8,8 @@ name: Publish to npm
 #
 # This workflow does NOT install dependencies — npm publish only packs
 # files listed in package.json "files" and does not require node_modules.
-# The @selat-ai/selat-pay dep (private scoped) would otherwise need an
-# auth token here, which trusted publishing intentionally avoids.
+# The @selat-ai/selat-pay dep is a public npm package, resolved by the
+# end user's npm install, so it is not needed at publish time.
 #
 # Triggers:
 #   - Pushing a tag like `v0.2.0` runs the full publish.
