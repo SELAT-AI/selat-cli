@@ -14,6 +14,7 @@ import { init } from "../lib/commands/init.mjs";
 import { run } from "../lib/commands/run.mjs";
 import { doctor } from "../lib/commands/doctor.mjs";
 import { fund } from "../lib/commands/fund.mjs";
+import { history } from "../lib/commands/history.mjs";
 import { setupPolicy } from "../lib/commands/setup-policy.mjs";
 import { skill } from "../lib/commands/skill.mjs";
 import { fmt } from "../lib/ui.mjs";
@@ -25,6 +26,7 @@ ${fmt.bold("Commands:")}
   run <intent>          Discover + rank + pay for an x402 service in one pipe.
   skill <list|run|…>    List, install, and run packaged Selat skills.
   fund                  Top up Gateway; --method eco gasless from Base, Optimism, or Arbitrum → Polygon.
+  history               Show locally recorded Gateway micropayments.
   setup-policy          Set Circle spending limits (recommended before any deposit > $20).
   doctor                Diagnose setup problems (skill, PATH, auth, wallet, config).
 
@@ -36,6 +38,7 @@ ${fmt.bold("Examples:")}
   selat init
   selat run "summarize the latest news on gold prices"
   selat skill install market-snapshot && selat skill run market-snapshot
+  selat history
   selat fund --chain base --amount 2
   selat fund --chain optimism --amount 2 --method eco   # gasless (Base/Optimism/Arbitrum), no ETH gas needed
 `;
@@ -63,6 +66,8 @@ async function main(argv) {
       return await skill(rest);
     case "fund":
       return await fund(rest);
+    case "history":
+      return await history(rest);
     case "setup-policy":
       return await setupPolicy(rest);
     case "doctor":
