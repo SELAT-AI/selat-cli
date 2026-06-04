@@ -54,6 +54,19 @@ jobs:
           fi
           echo "Tag and package.json both at ${PKG_VERSION}"
 
+      - name: Verify bin/selat.mjs VERSION constant matches package.json
+        # Catches the case where package.json is bumped but the hard-coded
+        # VERSION constant printed by `selat --version` is not (or vice versa).
+        # This drift shipped silently as 0.5.1 before being caught.
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          BIN_VERSION=$(node -p "const c = require('fs').readFileSync('bin/selat.mjs','utf8'); const m = c.match(/^const\s+VERSION\s*=\s*\"([^\"]+)\"/m); if(!m) throw new Error('VERSION constant not found in bin/selat.mjs'); m[1]")
+          if [ "$BIN_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::bin/selat.mjs VERSION (${BIN_VERSION}) does not match package.json version (${PKG_VERSION})"
+            exit 1
+          fi
+          echo "bin/selat.mjs VERSION and package.json both at ${PKG_VERSION}"
+
       - name: Syntax check
         run: npm run check
 
