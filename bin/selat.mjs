@@ -24,7 +24,7 @@ const USAGE = `${fmt.bold("selat")} — agent payment setup helper
 ${fmt.bold("Commands:")}
   init                  Check skill, Circle auth, Agent Wallet, selat-pay, and config.
   run <intent>          Discover + rank + pay for an x402 service in one pipe.
-  skill <list|run|…>    List, install, and run packaged Selat skills.
+  skill <list|run|new|…> List, install, run, author (new/validate) Selat skills.
   fund                  Top up Gateway; --method eco gasless from Base, Optimism, or Arbitrum → Polygon.
   history               Show locally recorded Gateway micropayments.
   setup-policy          Set Circle spending limits (recommended before any deposit > $20).
