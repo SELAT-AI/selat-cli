@@ -61,7 +61,7 @@ Either way you get a real paid API response. No API keys, no manually-acquired U
 |---|---|
 | `selat init` | Full bootstrap. Idempotent — safe to re-run. |
 | `selat run "<intent>"` | Discover + rank + pay in one pipe. Sugar for the discovery skill's `rank.mjs --pick` payment plan. |
-| `selat skill list [--available]` | List installed skills, or the catalog of skills available to install. |
+| `selat skill list [--available]` | List installed skills, or the catalog of skills available to install — each with a live **reliability** badge (● ok / ● degraded / ● down / ○ unknown) from the selat-skills auto-verify registry. |
 | `selat skill install <name\|path> [--force]` | Install an **agent skill** by name (from the public [selat-skills](https://github.com/SELAT-AI/selat-skills) registry) or from a local path. |
 | `selat skill run <name> [--param value ...]` | Run an installed agent skill, passing its params as `--flags`. |
 | `selat fund [--chain ... --amount ... --method direct\|eco]` | Top up Gateway balance. Dry-runs first; requires explicit confirm. Use `--method eco` for gasless Eco deposits; Base is supported by default (`base` / `8453` / `eip155:8453`), no ETH/native gas deposit is needed in the wallet, and Base is currently the only Eco chain. |
@@ -77,7 +77,7 @@ reusable recipes composed of one or more catalogue API endpoints, paid via
 executable code), so installing one only ever writes data.
 
 ```bash
-selat skill list --available                 # browse the catalog
+selat skill list --available                 # browse the catalog (with reliability badges)
 selat skill install market-snapshot          # install a skill
 selat skill run market-snapshot              # run it
 selat skill run token-price --symbols ETH,USDC
