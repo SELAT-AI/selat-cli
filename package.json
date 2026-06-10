@@ -8,6 +8,7 @@
   },
   "scripts": {
     "check": "node --check bin/selat.mjs && node --check lib/commands/*.mjs && node --check lib/*.mjs",
+    "test": "node --test test/*.test.mjs",
     "start": "node bin/selat.mjs"
   },
   "dependencies": {
