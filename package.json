@@ -9,6 +9,7 @@
   "scripts": {
     "check": "for f in bin/selat.mjs lib/*.mjs lib/commands/*.mjs; do node --check \"$f\" || exit 1; done",
     "test": "node --test test/*.test.mjs",
+    "version": "node scripts/sync-bin-version.mjs && git add bin/selat.mjs",
     "start": "node bin/selat.mjs"
   },
   "dependencies": {
