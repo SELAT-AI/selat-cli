@@ -138,11 +138,7 @@ SELAT_ROUTER_URL=https://router.selat.ai      # default SELAT Router
 SELAT_AGENT_WALLET_ADDRESS=0xb71105c418b671cd8e6b983611c1fa142d22f51b
 ```
 
-The default points at the SELAT Router at `https://router.selat.ai`. You can override it with your own router URL via `--router-url=`. If you override to a plain `http://` URL, init prints a MITM warning at runtime — a network attacker on the path can rewrite `payTo` in the 402 and capture the signed payment.
-
-Override the router URL at init time: `selat init --router-url=https://custom.example`
-
-Override at runtime per call: `SELAT_ROUTER_URL=... selat run "..."`
+The default points at the SELAT Router at `https://router.selat.ai`.
 
 ## Status
 
