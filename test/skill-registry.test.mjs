@@ -65,6 +65,25 @@ test("compileStep still validates a malformed user override", () => {
   );
 });
 
+// ── compileStep: --raw-key override ─────────────────────────────────────────
+
+test("compileStep emits --raw-key when the override is set", () => {
+  // Arc Gateway funds sit under a raw EOA the Circle Agent Wallet can't sign,
+  // so `selat skill run --raw-key` must reach selat-pay as --raw-key.
+  const { argv } = compileStep({ chain: "arc", maxAmount: "0.01" }, step(), {}, { rawKey: true });
+  assert.ok(argv.includes("--raw-key"), "argv should include --raw-key");
+});
+
+test("compileStep omits --raw-key by default (default signing path)", () => {
+  const { argv } = compileStep({ chain: "base", maxAmount: "0.01" }, step(), {});
+  assert.ok(!argv.includes("--raw-key"), "argv should not include --raw-key");
+});
+
+test("compileStep omits --raw-key when the override is falsy", () => {
+  const { argv } = compileStep({ chain: "base", maxAmount: "0.01" }, step(), {}, { rawKey: false });
+  assert.ok(!argv.includes("--raw-key"));
+});
+
 test("compileStep requires a cap from some source", () => {
   assert.throws(() => compileStep({ chain: "base" }, step(), {}), /no maxAmount set/);
 });
