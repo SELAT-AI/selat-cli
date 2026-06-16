@@ -16,6 +16,9 @@
     "@selat-ai/selat-agent-payments": "^0.8.1",
     "@selat-ai/selat-pay": "^0.7.0"
   },
+  "overrides": {
+    "ws": "8.21.0"
+  },
   "publishConfig": {
     "access": "public"
   },

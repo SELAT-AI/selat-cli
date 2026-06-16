@@ -6,11 +6,9 @@ name: Publish to npm
 # at https://www.npmjs.com/package/@selat-ai/selat-cli/access by adding
 # this repo + workflow as a trusted publisher.
 #
-# This workflow does NOT install dependencies — npm publish only packs
-# files listed in package.json "files" and does not require node_modules.
-# The @selat-ai/selat-pay and @selat-ai/selat-agent-payments deps are
-# public npm packages, resolved by the end user's npm install, so they
-# are not needed at publish time.
+# The release gate installs from package-lock.json and runs the local checks
+# before packing, so stale dependency pins or bundled-runtime drift fail before
+# a trusted-publishing release can go out.
 #
 # Triggers:
 #   - Pushing a tag like `v0.2.0` runs the full publish.
@@ -67,8 +65,14 @@ jobs:
           fi
           echo "bin/selat.mjs VERSION and package.json both at ${PKG_VERSION}"
 
+      - name: Install dependencies
+        run: npm ci
+
       - name: Syntax check
         run: npm run check
+
+      - name: Test
+        run: npm test
 
       - name: Dry-run pack
         run: npm pack --dry-run
