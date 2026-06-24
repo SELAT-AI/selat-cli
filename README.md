@@ -6,24 +6,15 @@ The package is `@selat-ai/selat-cli`; it installs the `selat` command.
 
 ## Install
 
-Install from the GitHub repo:
-
-```bash
-git clone https://github.com/SELAT-AI/selat-cli /path/to/selat-cli
-cd /path/to/selat-cli
-npm install
-npm link
-```
-
-That exposes the `selat` command on your `PATH`.
-
-If the package has been published to npm, install it with:
+Install from npm:
 
 ```bash
 npm install -g @selat-ai/selat-cli
 ```
 
-Then install the agent-payment skill and run:
+That exposes the `selat` command on your `PATH`.
+
+Then run:
 
 ```bash
 selat init
