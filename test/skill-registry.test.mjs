@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
-import { compileStep, validateManifest } from "../lib/skill-registry.mjs";
+import { compileStep, installSkill, listSkills, validateManifest } from "../lib/skill-registry.mjs";
 
 // A manifest is untrusted data fetched anonymously from a public, community
 // repo. These tests pin the validation that keeps a malicious or compromised
@@ -142,6 +146,26 @@ test("validateManifest rejects a manifest-level cap over the ceiling", () => {
   );
 });
 
+test("validateManifest accepts a high manifest cap with explicit --max-amount authorization", () => {
+  assert.doesNotThrow(() =>
+    validateManifest(
+      { schema: "selat-skill/v1", name: "demo", maxAmount: "5", steps: [step({ maxAmount: "5" })] },
+      { maxAmountOverride: "5" }
+    )
+  );
+});
+
+test("validateManifest rejects a high manifest cap above explicit --max-amount authorization", () => {
+  assert.throws(
+    () =>
+      validateManifest(
+        { schema: "selat-skill/v1", name: "demo", maxAmount: "5", steps: [step({ maxAmount: "5" })] },
+        { maxAmountOverride: "1" }
+      ),
+    /exceeds explicit --max-amount/
+  );
+});
+
 test("validateManifest rejects a non-numeric step cap", () => {
   assert.throws(() => validateManifest(manifest({ maxAmount: "free" })), /must be a positive number/);
 });
@@ -155,4 +179,46 @@ test("validateManifest defers a fully-templated host to compile time", () => {
 test("validateManifest accepts a clean manifest", () => {
   const m = manifest({ maxAmount: "0.05" });
   assert.equal(validateManifest(m), m);
+});
+
+test("installSkill installs a high-cap local manifest only with explicit authorization", async () => {
+  const oldXdg = process.env.XDG_CONFIG_HOME;
+  const oldDev = process.env.SELAT_SKILLS_DIR;
+  const root = await mkdtemp(join(tmpdir(), "selat-cli-test-"));
+  const src = join(root, "src");
+  const xdg = join(root, "xdg");
+  process.env.XDG_CONFIG_HOME = xdg;
+  delete process.env.SELAT_SKILLS_DIR;
+
+  try {
+    await mkdir(src, { recursive: true });
+    const manifestPath = join(src, "manifest.json");
+    await writeFile(
+      manifestPath,
+      JSON.stringify({
+        schema: "selat-skill/v1",
+        name: "high-cap-demo",
+        description: "High cap demo",
+        chain: "base",
+        maxAmount: "5",
+        steps: [{ method: "GET", url: "https://api.example.com/data", maxAmount: "5" }]
+      }),
+      "utf8"
+    );
+
+    await assert.rejects(() => installSkill(src), /exceeds the per-call ceiling/);
+    const installed = await installSkill(src, { maxAmount: "5" });
+    assert.equal(installed.name, "high-cap-demo");
+    assert.ok(existsSync(join(xdg, "selat", "skills", "high-cap-demo", "manifest.json")));
+    const stored = JSON.parse(await readFile(join(xdg, "selat", "skills", "high-cap-demo", "manifest.json"), "utf8"));
+    assert.equal(stored.maxAmount, "5");
+
+    const skills = await listSkills();
+    assert.ok(skills.some((s) => s.name === "high-cap-demo"), "high-cap installed skill should be listable");
+  } finally {
+    if (oldXdg == null) delete process.env.XDG_CONFIG_HOME;
+    else process.env.XDG_CONFIG_HOME = oldXdg;
+    if (oldDev == null) delete process.env.SELAT_SKILLS_DIR;
+    else process.env.SELAT_SKILLS_DIR = oldDev;
+  }
 });
