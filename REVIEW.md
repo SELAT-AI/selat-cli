@@ -5,7 +5,7 @@
 **selat-cli** is a lightweight Node.js CLI orchestrator that bootstrap the SELAT agent payments ecosystem. It bundles Circle CLI integration, selat-pay CLI resolution, and agent-payment skill discovery into a single `selat init` → `selat run` workflow. Users install this CLI once, run init to set up wallets/config, then call `selat run "<intent>"` to discover, rank, and pay for x402-routed API calls. It is the user-facing entry point for the broader SELAT ecosystem, which includes:
 - **selat-pay**: standalone CLI that signs and retries payments to the SELAT Router
 - **selat-router**: server that proxies paid upstream requests and handles x402/MPP payment flows
-- **selat-agent-payments**: discovery skill that ranks and plans paid service calls
+- **selat-discovery**: discovery skill that ranks and plans paid service calls
 
 selat-cli itself doesn't reimplement these pieces; it orchestrates them and hides the setup plumbing.
 
@@ -102,7 +102,7 @@ const r = await sh("curl", ["-sS", "-m", "5", ..., `${cfg.SELAT_ROUTER_URL}/heal
 
 - **Circle CLI binary name assumption:** selat-cli respects CIRCLE_BIN env var (defaults to "circle") and checks it with `hasBin("circle")`. selat-pay likely calls circle as well. If the binary is renamed or namespaced, both repos need updates. No shared Circle CLI wrapper library. Consider extracting Circle helpers into a shared package if the ecosystem grows.
 
-- **No dependency on selat-agent-payments for skill location:** selat-cli hard-codes skill candidate paths (~/.codex/skills/selat-agent-payments and ~/.claude/skills/selat-agent-payments). If the skill repo changes its install directory or the agent framework updates, selat-cli is blind. Document the contract in the skill repo's README or via an env var.
+- **No dependency on selat-discovery for skill location:** selat-cli hard-codes skill candidate paths (~/.codex/skills/selat-discovery and ~/.claude/skills/selat-discovery). If the skill repo changes its install directory or the agent framework updates, selat-cli is blind. Document the contract in the skill repo's README or via an env var.
 
 ---
 

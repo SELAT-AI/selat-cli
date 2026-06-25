@@ -95,7 +95,7 @@ selat skill run person-lookup --query "Patrick Collison Stripe"
   (dev); `SELAT_SKILLS_REPO` / `SELAT_SKILLS_REF` / `SELAT_SKILLS_RAW_BASE` retarget
   the registry. You can also `selat skill install ./path/to/skill` from disk.
 
-Skills are authored to the [Agent Skill SOP](https://github.com/SELAT-AI/selat-agent-payments/blob/main/references/agent-skill-authoring-sop.md):
+Skills are authored to the [Agent Skill SOP](https://github.com/SELAT-AI/selat-discovery/blob/main/references/agent-skill-authoring-sop.md):
 each is a folder with `SKILL.md`, `manifest.json`, `references/endpoints.md`, and `evals/`.
 
 ## What this is
@@ -104,7 +104,7 @@ each is a folder with `SKILL.md`, `manifest.json`, `references/endpoints.md`, an
 
 - The **Circle CLI** (`@circle-fin/cli`) — wallet creation, MPC-backed signing, Gateway deposits.
 - The **`selat-pay`** CLI ([SELAT-AI/selat-pay](https://github.com/SELAT-AI/selat-pay)) — probe + sign + retry against the SELAT Router, with direct/routed mode auto-detect.
-- The **discovery skill** ([SELAT-AI/selat-agent-payments](https://github.com/SELAT-AI/selat-agent-payments)) — federated catalog, intent ranking, payment-plan emission (powers `selat run`).
+- The **discovery skill** ([SELAT-AI/selat-discovery](https://github.com/SELAT-AI/selat-discovery)) — federated catalog, intent ranking, payment-plan emission (powers `selat run`).
 - **Agent skills** ([SELAT-AI/selat-skills](https://github.com/SELAT-AI/selat-skills)) — installable catalogue-endpoint recipes (powers `selat skill`).
 
 It doesn't reimplement any of them — it just wires them together so a new user can get from `selat init` to their first paid response without hand-editing config files.
@@ -141,7 +141,7 @@ The default points at the SELAT Router at `https://router.selat.ai`.
 
 **Working beta.** `selat init` bootstraps a Circle Agent Wallet and writes the `selat-pay` config; it skips wallet creation when an agent wallet already exists (use `--force` to re-run). `selat run "<intent>"` discovers, ranks, and pays an x402 / MPP service end to end.
 
-The `selat-agent-payments` discovery skill and `selat-pay` ship as npm dependencies, so `npm install -g @selat-ai/selat-cli` pulls everything `selat run` needs — no separate skill install or repo clone. (`SELAT_SKILL_PATH`, or a local `~/.codex/skills` / `~/.claude/skills` checkout, still takes precedence if you're developing the discovery skill.)
+The `selat-discovery` discovery skill and `selat-pay` ship as npm dependencies, so `npm install -g @selat-ai/selat-cli` pulls everything `selat run` needs — no separate skill install or repo clone. (`SELAT_SKILL_PATH`, or a local `~/.codex/skills` / `~/.claude/skills` checkout, still takes precedence if you're developing the discovery skill.)
 
 **Agent skills** (`selat skill`) are not bundled — they're installed on demand from the public [SELAT-AI/selat-skills](https://github.com/SELAT-AI/selat-skills) repo, so the catalog can grow without a CLI release.
 
