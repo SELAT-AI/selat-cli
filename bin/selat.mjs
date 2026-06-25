@@ -37,7 +37,7 @@ ${fmt.bold("Options:")}
 ${fmt.bold("Examples:")}
   selat init
   selat run "summarize the latest news on gold prices"
-  selat skill install market-snapshot && selat skill run market-snapshot
+  selat skill install twitter-profile-lookup && selat skill run twitter-profile-lookup --handle openai
   selat history
   selat fund --chain base --amount 2
   selat fund --chain optimism --amount 2 --method eco   # gasless (Base/Optimism/Arbitrum), no ETH gas needed

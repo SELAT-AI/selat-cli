@@ -29,7 +29,7 @@ That command:
 5. Prompts to **reuse your existing agent wallet or create a new one**, then ensures wallets exist across all Circle-supported chains. (`--force` re-creates non-interactively.)
 6. Checks whether `selat-pay` is on `PATH`.
 7. Writes `~/.config/selat-pay/.env` with your router URL and wallet address.
-8. Checks for spendable USDC — **on-chain balance across Base / Optimism / Arbitrum / Polygon** and your Gateway balance (broken down per chain, so you can see which chain holds it) — and, if there's none, optionally claims a **2 USDC welcome drip** or points you to `selat fund`.
+8. Checks for spendable USDC — **on-chain balance across Base / Optimism / Arbitrum / Polygon** and your Gateway balance (broken down per chain, so you can see which chain holds it) — and, if there's none, points you to `selat fund`.
 
 Then either describe an intent and let the CLI discover + pay:
 
@@ -40,8 +40,8 @@ selat run "summarize the latest news on gold prices"
 …or install and run a packaged **agent skill**:
 
 ```bash
-selat skill install market-snapshot
-selat skill run market-snapshot
+selat skill install twitter-profile-lookup
+selat skill run twitter-profile-lookup --handle openai
 ```
 
 Either way you get a real paid API response. No API keys, no manually-acquired USDC, no scheme branching, no Unix-streams jargon.
@@ -69,9 +69,9 @@ executable code), so installing one only ever writes data.
 
 ```bash
 selat skill list --available                 # browse the catalog (with reliability badges)
-selat skill install market-snapshot          # install a skill
-selat skill run market-snapshot              # run it
-selat skill run token-price --symbols ETH,USDC
+selat skill install twitter-profile-lookup   # install a skill
+selat skill run twitter-profile-lookup --handle openai   # run it
+selat skill run person-lookup --query "Patrick Collison Stripe"
 ```
 
 - **Where skills live:** skill content is maintained in the separate, public repo
@@ -81,9 +81,9 @@ selat skill run token-price --symbols ETH,USDC
   `~/.config/selat/skills/<name>/`.
 - **Rails:** a skill step is paid **direct** (Circle nanopayment / Gateway-batched,
   straight to the upstream) or **routed** (erc-3009 or tempo-native MPP, translated
-  by the SELAT Router). Multi-rail skills (e.g. `market-snapshot`,
-  `crypto-sentiment-snapshot`) exercise both in one run and print a per-rail summary.
-- **Params:** pass a skill's inputs as `--flags` (e.g. `--symbols ETH,USDC`).
+  by the SELAT Router). A run prints a per-rail summary, so a skill that mixes
+  rails reports each separately.
+- **Params:** pass a skill's inputs as `--flags` (e.g. `--handle openai`).
   `--chain` and `--max-amount` are reserved per-run overrides applied to every step.
   The `--chain` you pay on must match the chain your Gateway balance lives on: if
   you funded with `selat fund --method eco` (source Base/Optimism/Arbitrum), that
@@ -144,8 +144,6 @@ The default points at the SELAT Router at `https://router.selat.ai`.
 The `selat-agent-payments` discovery skill and `selat-pay` ship as npm dependencies, so `npm install -g @selat-ai/selat-cli` pulls everything `selat run` needs — no separate skill install or repo clone. (`SELAT_SKILL_PATH`, or a local `~/.codex/skills` / `~/.claude/skills` checkout, still takes precedence if you're developing the discovery skill.)
 
 **Agent skills** (`selat skill`) are not bundled — they're installed on demand from the public [SELAT-AI/selat-skills](https://github.com/SELAT-AI/selat-skills) repo, so the catalog can grow without a CLI release.
-
-The optional welcome-drip step is still stubbed pending the router endpoint (spec at [SELAT-AI/selat-router#6](https://github.com/SELAT-AI/selat-router/pull/6)).
 
 ## License
 
