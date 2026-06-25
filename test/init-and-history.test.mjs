@@ -19,7 +19,7 @@ test("init --help returns help without running setup", async () => {
     const code = await init(["--help"]);
     assert.equal(code, 0);
     assert.match(output, /selat init/);
-    assert.match(output, /--no-drip/);
+    assert.match(output, /--force/);
     assert.doesNotMatch(output, /Checking Circle CLI/);
   } finally {
     console.log = oldLog;
@@ -83,7 +83,7 @@ exit 2
   );
   await chmod(fakeCircle, 0o755);
 
-  const result = await runNode(["bin/selat.mjs", "init", "--no-drip"], {
+  const result = await runNode(["bin/selat.mjs", "init"], {
     cwd: new URL("..", import.meta.url).pathname,
     env: {
       ...process.env,
