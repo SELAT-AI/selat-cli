@@ -55,7 +55,7 @@ Either way you get a real paid API response. No API keys, no manually-acquired U
 | `selat skill list [--available]` | List installed skills, or the catalog of skills available to install — each with a live **reliability** badge (● ok / ● degraded / ● down / ○ unknown) from the selat-skills auto-verify registry. |
 | `selat skill install <name\|path> [--force]` | Install an **agent skill** by name (from the public [selat-skills](https://github.com/SELAT-AI/selat-skills) registry) or from a local path. |
 | `selat skill run <name> [--param value ...]` | Run an installed agent skill, passing its params as `--flags`. |
-| `selat fund [--chain ... --amount ... --method direct\|eco]` | Top up Gateway balance. Dry-runs first; requires explicit confirm. **`--method direct`** deposits on-chain; the balance stays on the chain you deposited from. **`--method eco`** is gasless (no ETH/native gas needed) — its only mainnet source chain is Base, but the resulting Gateway balance **settles on Polygon**. After an Eco deposit, pay and check balance with `--chain polygon` (not `base`), or the call fails with `insufficient_balance`. |
+| `selat fund [--chain ... --amount ... --method direct\|eco]` | Top up Gateway balance. Dry-runs first; requires explicit confirm. **`--method direct`** deposits on-chain; the balance stays on the chain you deposited from. **`--method eco`** is gasless (no ETH/native gas needed) — you can source from Base, Optimism, or Arbitrum, but the resulting Gateway balance **settles on Polygon** regardless of source chain. After an Eco deposit, pay and check balance with `--chain polygon` (not the source chain), or the call fails with `insufficient_balance`. |
 | `selat setup-policy` | Set Circle spending caps on your Agent Wallet. Requires an email OTP (Circle's policy-write security). Recommended before any deposit > $20. |
 | `selat doctor` | Diagnose setup problems in one pass. Run when something looks off. |
 | `selat --help` | This page. |
@@ -86,9 +86,10 @@ selat skill run token-price --symbols ETH,USDC
 - **Params:** pass a skill's inputs as `--flags` (e.g. `--symbols ETH,USDC`).
   `--chain` and `--max-amount` are reserved per-run overrides applied to every step.
   The `--chain` you pay on must match the chain your Gateway balance lives on: if
-  you funded with `selat fund --method eco`, that balance is on **Polygon**, so use
-  `--chain polygon`. Run `circle gateway balance --address <wallet> --chain BASE --all`
-  to see which chain holds your USDC.
+  you funded with `selat fund --method eco` (source Base/Optimism/Arbitrum), that
+  balance settles on **Polygon**, so use `--chain polygon`. Run
+  `circle gateway balance --address <wallet> --chain BASE --all` to see which chain
+  holds your USDC.
 - **Overrides:** `SELAT_SKILLS_DIR` points at a local checkout of the skills repo
   (dev); `SELAT_SKILLS_REPO` / `SELAT_SKILLS_REF` / `SELAT_SKILLS_RAW_BASE` retarget
   the registry. You can also `selat skill install ./path/to/skill` from disk.
