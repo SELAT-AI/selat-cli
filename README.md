@@ -88,8 +88,9 @@ selat skill run token-price --symbols ETH,USDC
   The `--chain` you pay on must match the chain your Gateway balance lives on: if
   you funded with `selat fund --method eco` (source Base/Optimism/Arbitrum), that
   balance settles on **Polygon**, so use `--chain polygon`. Run
-  `circle gateway balance --address <wallet> --chain BASE --all` to see which chain
-  holds your USDC.
+  `circle gateway balance --address <wallet> --chain polygon --all` to see which
+  chain holds your USDC — `--all` lists every chain, so the `--chain` you pass only
+  resolves the wallet address.
 - **Overrides:** `SELAT_SKILLS_DIR` points at a local checkout of the skills repo
   (dev); `SELAT_SKILLS_REPO` / `SELAT_SKILLS_REF` / `SELAT_SKILLS_RAW_BASE` retarget
   the registry. You can also `selat skill install ./path/to/skill` from disk.
