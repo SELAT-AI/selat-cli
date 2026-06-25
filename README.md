@@ -132,7 +132,7 @@ Without this wrapper, the setup ordeal is:
 ```
 # ~/.config/selat-pay/.env (mode 0600)
 SELAT_ROUTER_URL=https://router.selat.ai      # default SELAT Router
-SELAT_AGENT_WALLET_ADDRESS=0xb71105c418b671cd8e6b983611c1fa142d22f51b
+SELAT_AGENT_WALLET_ADDRESS=0xYourAgentWalletAddress   # written by `selat init` from your Circle wallet
 ```
 
 The default points at the SELAT Router at `https://router.selat.ai`.
