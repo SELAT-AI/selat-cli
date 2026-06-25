@@ -29,7 +29,7 @@ That command:
 5. Prompts to **reuse your existing agent wallet or create a new one**, then ensures wallets exist across all Circle-supported chains. (`--force` re-creates non-interactively.)
 6. Checks whether `selat-pay` is on `PATH`.
 7. Writes `~/.config/selat-pay/.env` with your router URL and wallet address.
-8. Checks for spendable USDC — **on-chain balance across Base / Optimism / Arbitrum** and your Gateway balance — and, if there's none, optionally claims a **2 USDC welcome drip** or points you to `selat fund`.
+8. Checks for spendable USDC — **on-chain balance across Base / Optimism / Arbitrum / Polygon** and your Gateway balance (broken down per chain, so you can see which chain holds it) — and, if there's none, optionally claims a **2 USDC welcome drip** or points you to `selat fund`.
 
 Then either describe an intent and let the CLI discover + pay:
 
