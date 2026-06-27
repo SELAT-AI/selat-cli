@@ -222,3 +222,33 @@ test("installSkill installs a high-cap local manifest only with explicit authori
     else process.env.SELAT_SKILLS_DIR = oldDev;
   }
 });
+
+// ── chain is not a manifest property ────────────────────────────────────────
+// Settlement chain is resolved at runtime (from the wallet's funded Gateway
+// balance), so a manifest need not declare one. These pin that a chain-less
+// manifest validates and compiles via the caller-supplied defaultChain.
+
+test("validateManifest accepts a chain-less manifest", () => {
+  assert.doesNotThrow(() =>
+    validateManifest({ schema: "selat-skill/v1", name: "demo", maxAmount: "0.01", steps: [step()] })
+  );
+});
+
+test("compileStep resolves a chain-less manifest from defaultChain (funded Gateway balance)", () => {
+  const { argv } = compileStep({ maxAmount: "0.01" }, step(), {}, {}, "polygon");
+  assert.equal(argv[2], "--chain");
+  assert.equal(argv[3], "polygon"); // e.g. Eco-funded balance settles on Polygon
+});
+
+test("compileStep precedence: --chain override beats manifest chain beats defaultChain", () => {
+  // manifest pins base, but an explicit --chain wins.
+  const pinned = compileStep({ chain: "base", maxAmount: "0.01" }, step(), {}, { chain: "arbitrum" }, "polygon");
+  assert.equal(pinned.argv[3], "arbitrum");
+  // no override: an optional manifest pin still beats the default.
+  const manifestPin = compileStep({ chain: "base", maxAmount: "0.01" }, step(), {}, {}, "polygon");
+  assert.equal(manifestPin.argv[3], "base");
+});
+
+test("compileStep with no chain anywhere still errors clearly", () => {
+  assert.throws(() => compileStep({ maxAmount: "0.01" }, step(), {}), /no chain set/);
+});
