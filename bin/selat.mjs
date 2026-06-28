@@ -43,7 +43,7 @@ ${fmt.bold("Examples:")}
   selat fund --chain optimism --amount 2 --method eco   # gasless (Base/Optimism/Arbitrum), no ETH gas needed
 `;
 
-const VERSION = "0.7.2";
+const VERSION = "0.8.0";
 
 async function main(argv) {
   const [, , cmd, ...rest] = argv;
