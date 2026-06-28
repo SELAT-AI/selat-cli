@@ -12,6 +12,7 @@
 
 import { init } from "../lib/commands/init.mjs";
 import { run } from "../lib/commands/run.mjs";
+import { search } from "../lib/commands/search.mjs";
 import { doctor } from "../lib/commands/doctor.mjs";
 import { fund } from "../lib/commands/fund.mjs";
 import { history } from "../lib/commands/history.mjs";
@@ -23,6 +24,7 @@ const USAGE = `${fmt.bold("selat")} — agent payment setup helper
 
 ${fmt.bold("Commands:")}
   init                  Check skill, Circle auth, Agent Wallet, selat-pay, and config.
+  search <intent>       Discover + rank endpoints for a capability (FREE; no wallet, no spend).
   run <intent>          Discover + rank + pay for an x402 service in one pipe.
   skill <list|run|new|…> List, install, run, author (new/validate) Selat skills.
   fund                  Top up Gateway; --method eco gasless from Base, Optimism, or Arbitrum → Polygon.
@@ -36,6 +38,7 @@ ${fmt.bold("Options:")}
 
 ${fmt.bold("Examples:")}
   selat init
+  selat search "enrich a person by name and company"   # free discovery, no spend
   selat run "summarize the latest news on gold prices"
   selat skill install twitter-profile-lookup && selat skill run twitter-profile-lookup --handle openai
   selat history
@@ -60,6 +63,8 @@ async function main(argv) {
   switch (cmd) {
     case "init":
       return await init(rest);
+    case "search":
+      return await search(rest);
     case "run":
       return await run(rest);
     case "skill":
