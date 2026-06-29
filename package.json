@@ -13,7 +13,7 @@
     "start": "node bin/selat.mjs"
   },
   "dependencies": {
-    "@selat-ai/selat-discovery": "^0.8.2",
+    "@selat-ai/selat-discovery": "^0.8.3",
     "@selat-ai/selat-pay": "^0.7.0"
   },
   "overrides": {
