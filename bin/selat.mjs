@@ -19,6 +19,7 @@ import { history } from "../lib/commands/history.mjs";
 import { setupPolicy } from "../lib/commands/setup-policy.mjs";
 import { skill } from "../lib/commands/skill.mjs";
 import { fmt } from "../lib/ui.mjs";
+import { ensureHarnessPath } from "../lib/host.mjs";
 
 const USAGE = `${fmt.bold("selat")} — agent payment setup helper
 
@@ -59,6 +60,11 @@ async function main(argv) {
     console.log(VERSION);
     return 0;
   }
+
+  // Make `selat` resolvable in harnesses that don't persist the hook's PATH/env
+  // (e.g. OpenClaw). Best-effort + idempotent + a no-op off those hosts. Riding the
+  // runner means existing installs get this on the next session — see lib/host.mjs.
+  ensureHarnessPath();
 
   switch (cmd) {
     case "init":
