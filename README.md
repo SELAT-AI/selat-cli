@@ -56,6 +56,7 @@ Either way you get a real paid API response. No API keys, no manually-acquired U
 | `selat skill install <name\|path> [--force]` | Install an **agent skill** by name (from the public [selat-skills](https://github.com/SELAT-AI/selat-skills) registry) or from a local path. |
 | `selat skill run <name> [--param value ...]` | Run an installed agent skill, passing its params as `--flags`. |
 | `selat fund [--chain ... --amount ... --method direct\|eco]` | Top up Gateway balance. Dry-runs first; requires explicit confirm. **`--method direct`** deposits on-chain; the balance stays on the chain you deposited from. **`--method eco`** is gasless (no ETH/native gas needed) — you can source from Base, Optimism, or Arbitrum, but the resulting Gateway balance **settles on Polygon** regardless of source chain. After an Eco deposit, pay and check balance with `--chain polygon` (not the source chain), or the call fails with `insufficient_balance`. |
+| `selat spend [--json\|--wallet 0x..]` | Unified spend report (read-only): settled spend from the `selat-pay` ledger (per-call payments + Apify token buys, with a charged-but-failed/disputable total) plus Apify token utilization (consumed vs remaining, flagging prepaid-balance waste). |
 | `selat setup-policy` | Set Circle spending caps on your Agent Wallet. Requires an email OTP (Circle's policy-write security). Recommended before any deposit > $20. |
 | `selat doctor` | Diagnose setup problems in one pass. Run when something looks off. |
 | `selat --help` | This page. |
