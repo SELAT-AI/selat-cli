@@ -16,6 +16,7 @@ import { search } from "../lib/commands/search.mjs";
 import { doctor } from "../lib/commands/doctor.mjs";
 import { fund } from "../lib/commands/fund.mjs";
 import { history } from "../lib/commands/history.mjs";
+import { spend } from "../lib/commands/spend.mjs";
 import { setupPolicy } from "../lib/commands/setup-policy.mjs";
 import { skill } from "../lib/commands/skill.mjs";
 import { fmt } from "../lib/ui.mjs";
@@ -30,6 +31,7 @@ ${fmt.bold("Commands:")}
   skill <list|run|new|…> List, install, run, author (new/validate) Selat skills.
   fund                  Top up Gateway; --method eco gasless from Base, Optimism, or Arbitrum → Polygon.
   history               Show locally recorded Gateway micropayments.
+  spend                 Unified spend report: settled spend + Apify token utilization (read-only).
   setup-policy          Set Circle spending limits (recommended before any deposit > $20).
   doctor                Diagnose setup problems (skill, PATH, auth, wallet, config).
 
@@ -79,6 +81,8 @@ async function main(argv) {
       return await fund(rest);
     case "history":
       return await history(rest);
+    case "spend":
+      return await spend(rest);
     case "setup-policy":
       return await setupPolicy(rest);
     case "doctor":
