@@ -29,7 +29,7 @@ ${fmt.bold("Commands:")}
   search <intent>       Discover + rank endpoints for a capability (FREE; no wallet, no spend).
   run <intent>          Discover + rank + pay for an x402 service in one pipe.
   skill <list|run|new|…> List, install, run, author (new/validate) Selat skills.
-  fund                  Top up Gateway; --method eco gasless from Base, Optimism, or Arbitrum → Polygon.
+  fund                  Top up Gateway (gasless); --method eco routes Base/Optimism/Arbitrum → Polygon.
   history               Show locally recorded Gateway micropayments.
   spend                 Unified spend report: settled spend + Apify token utilization (read-only).
   setup-policy          Set Circle spending limits (recommended before any deposit > $20).

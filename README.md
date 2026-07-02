@@ -29,7 +29,7 @@ That command:
 5. Prompts to **reuse your existing agent wallet or create a new one**, then ensures wallets exist across all Circle-supported chains. (`--force` re-creates non-interactively.)
 6. Checks whether `selat-pay` is on `PATH`.
 7. Writes `~/.config/selat-pay/.env` with your router URL and wallet address.
-8. Checks for spendable USDC — **on-chain balance across Base / Optimism / Arbitrum / Polygon** and your Gateway balance (broken down per chain, so you can see which chain holds it) — and, if there's none, points you to `selat fund`.
+8. Checks for spendable USDC — **on-chain balance across Base / Optimism / Arbitrum / Polygon** and your Gateway balance (broken down per chain, so you can see which chain holds it) — and, if there's none, points you to `selat fund` (a gasless top-up — Circle sponsors the gas, so no native ETH required).
 
 Then either describe an intent and let the CLI discover + pay:
 
@@ -44,7 +44,7 @@ selat skill install twitter-profile-lookup
 selat skill run twitter-profile-lookup --handle openai
 ```
 
-Either way you get a real paid API response. No API keys, no manually-acquired USDC, no scheme branching, no Unix-streams jargon.
+Either way you get a real paid API response. No API keys, no native ETH to hold, no manually-acquired USDC, no scheme branching, no Unix-streams jargon.
 
 ## Commands
 
@@ -55,7 +55,7 @@ Either way you get a real paid API response. No API keys, no manually-acquired U
 | `selat skill list [--available]` | List installed skills, or the catalog of skills available to install — each with a live **reliability** badge (● ok / ● degraded / ● down / ○ unknown) from the selat-skills auto-verify registry. |
 | `selat skill install <name\|path> [--force]` | Install an **agent skill** by name (from the public [selat-skills](https://github.com/SELAT-AI/selat-skills) registry) or from a local path. |
 | `selat skill run <name> [--param value ...]` | Run an installed agent skill, passing its params as `--flags`. |
-| `selat fund [--chain ... --amount ... --method direct\|eco]` | Top up Gateway balance. Dry-runs first; requires explicit confirm. **`--method direct`** deposits on-chain; the balance stays on the chain you deposited from. **`--method eco`** is gasless (no ETH/native gas needed) — you can source from Base, Optimism, or Arbitrum, but the resulting Gateway balance **settles on Polygon** regardless of source chain. After an Eco deposit, pay and check balance with `--chain polygon` (not the source chain), or the call fails with `insufficient_balance`. |
+| `selat fund [--chain ... --amount ... --method direct\|eco]` | Top up Gateway balance. Dry-runs first; requires explicit confirm. **Both methods are gasless** — the deposit runs through your Circle Agent Wallet (a smart-contract account) and Circle sponsors the gas, so you never need to hold native ETH. The difference is **destination**: **`--method direct`** keeps the balance on the chain you deposited from; **`--method eco`** sources from Base, Optimism, or Arbitrum but settles the resulting Gateway balance on **Polygon** regardless of source chain. After an Eco deposit, pay and check balance with `--chain polygon` (not the source chain), or the call fails with `insufficient_balance`. |
 | `selat spend [--json\|--wallet 0x..]` | Unified spend report (read-only): settled spend from the `selat-pay` ledger (per-call payments + Apify token buys, with a charged-but-failed/disputable total) plus Apify token utilization (consumed vs remaining, flagging prepaid-balance waste). |
 | `selat setup-policy` | Set Circle spending caps on your Agent Wallet. Requires an email OTP (Circle's policy-write security). Recommended before any deposit > $20. |
 | `selat doctor` | Diagnose setup problems in one pass. Run when something looks off. |
