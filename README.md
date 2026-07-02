@@ -26,7 +26,7 @@ That command:
 2. Checks whether the agent-payment skill is installed.
 3. Checks that Circle CLI is installed.
 4. Walks you through Circle Agent Wallet login (one email + one OTP code).
-5. Prompts to **reuse your existing agent wallet or create a new one**, then ensures wallets exist across all Circle-supported chains. (`--force` re-creates non-interactively.)
+5. Prompts to **reuse your existing agent wallet or create a new one**. If your Circle account holds several agent wallets, it lists them all with their Gateway balances and defaults to the configured or best-funded one — so a fresh host doesn't silently adopt an empty wallet. (`--force` re-creates non-interactively.)
 6. Checks whether `selat-pay` is on `PATH`.
 7. Writes `~/.config/selat-pay/.env` with your router URL and wallet address.
 8. Checks for spendable USDC — **on-chain balance across Base / Optimism / Arbitrum / Polygon** and your Gateway balance (broken down per chain, so you can see which chain holds it) — and, if there's none, points you to `selat fund` (a gasless top-up — Circle sponsors the gas, so no native ETH required).
