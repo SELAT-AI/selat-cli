@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { configuredPayerAddress } from "../lib/circle.mjs";
+import { configuredPayerAddress, selectAgentWallet } from "../lib/circle.mjs";
 import { pickFundedSibling } from "../lib/commands/doctor.mjs";
 
 // Issue #54: getAgentAddress() must consult the same home config selat-pay
@@ -9,6 +9,9 @@ import { pickFundedSibling } from "../lib/commands/doctor.mjs";
 // (often empty) wallet than the actual payer. Addresses are fabricated.
 const ENV_ADDR = "0x1111111111111111111111111111111111111111";
 const CFG_ADDR = "0x2222222222222222222222222222222222222222";
+const W_EMPTY = "0x3333333333333333333333333333333333333333";
+const W_RICH = "0x4444444444444444444444444444444444444444";
+const W_POOR = "0x5555555555555555555555555555555555555555";
 
 test("configuredPayerAddress: env wins over home config", () => {
   const got = configuredPayerAddress({
@@ -47,12 +50,53 @@ test("configuredPayerAddress: invalid values are skipped, not returned", () => {
   );
 });
 
+test("selectAgentWallet: configured wallet wins when discovered", async () => {
+  const got = await selectAgentWallet(
+    [
+      { address: W_EMPTY, chains: ["BASE"] },
+      { address: CFG_ADDR, chains: ["BASE"] },
+      { address: W_RICH, chains: ["BASE"] },
+    ],
+    {
+      configuredAddress: CFG_ADDR,
+      gatewayBalanceFor: async () => 10,
+    },
+  );
+  assert.deepEqual(got, { address: CFG_ADDR, source: "config" });
+});
+
+test("selectAgentWallet: funded wallet wins when no wallet is configured", async () => {
+  const got = await selectAgentWallet(
+    [
+      { address: W_EMPTY, chains: ["BASE", "ETH", "ARB"] },
+      { address: W_RICH, chains: ["BASE"] },
+      { address: W_POOR, chains: ["BASE", "ETH"] },
+    ],
+    {
+      gatewayBalanceFor: async (address) => {
+        if (address === W_RICH) return 5.845435;
+        if (address === W_POOR) return 0.01;
+        return 0;
+      },
+    },
+  );
+  assert.deepEqual(got, { address: W_RICH, source: "gateway", gatewayBalance: 5.845435 });
+});
+
+test("selectAgentWallet: falls back to chain coverage when no wallet is funded", async () => {
+  const got = await selectAgentWallet(
+    [
+      { address: W_EMPTY, chains: ["BASE"] },
+      { address: W_RICH, chains: ["BASE", "ETH", "ARB"] },
+      { address: W_POOR, chains: ["BASE", "ETH"] },
+    ],
+    { gatewayBalanceFor: async () => 0 },
+  );
+  assert.deepEqual(got, { address: W_RICH, source: "chain-count" });
+});
+
 // doctor's funded-sibling hint: when the resolved wallet is empty but another
 // agent wallet on the account holds Gateway funds, surface it.
-const W_EMPTY = "0x3333333333333333333333333333333333333333";
-const W_RICH = "0x4444444444444444444444444444444444444444";
-const W_POOR = "0x5555555555555555555555555555555555555555";
-
 test("pickFundedSibling returns the best-funded other wallet", () => {
   const got = pickFundedSibling(
     [
