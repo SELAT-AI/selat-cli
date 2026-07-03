@@ -10,7 +10,7 @@ import { isApifyPrepaidPick, apifyActorIdFromPlan } from "../lib/commands/run.mj
 const apifyPlan = {
   service: { id: "apify:apify~instagram-scraper" },
   endpoint: {
-    fullUrl: "https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items",
+    fullUrl: "https://api.apify.com/v2/actors/apify~instagram-scraper/run-sync-get-dataset-items",
     payments: [{ protocol: "x402", scheme: "prepaid-token", paymentModel: "apify-prepaid-token" }],
   },
 };
@@ -38,4 +38,9 @@ test("apifyActorIdFromPlan prefers the Actor URL, falls back to the service id",
   assert.equal(apifyActorIdFromPlan({ service: { id: "apify:owner~actor" } }), "owner~actor");
   assert.equal(apifyActorIdFromPlan(normalPlan), null);
   assert.equal(apifyActorIdFromPlan({}), null);
+});
+
+test("apifyActorIdFromPlan accepts the legacy /v2/acts/ alias too (cached picks)", () => {
+  const legacy = { endpoint: { fullUrl: "https://api.apify.com/v2/acts/apify~instagram-scraper/run-sync-get-dataset-items" } };
+  assert.equal(apifyActorIdFromPlan(legacy), "apify~instagram-scraper");
 });
