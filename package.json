@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@selat-ai/selat-discovery": "^0.9.3",
-    "@selat-ai/selat-pay": "^0.7.0"
+    "@selat-ai/selat-pay": "^0.8.0"
   },
   "overrides": {
     "ws": "8.21.0"
