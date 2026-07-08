@@ -80,10 +80,11 @@ selat skill run person-lookup --query "Patrick Collison Stripe"
   no skills itself — `selat skill install` fetches the manifest **on demand and
   anonymously** over `raw.githubusercontent.com` (no GitHub auth required) into
   `~/.config/selat/skills/<name>/`.
-- **Rails:** a skill step is paid **direct** (Circle nanopayment / Gateway-batched,
-  straight to the upstream) or **routed** (erc-3009 or tempo-native MPP, translated
-  by the SELAT Router). A run prints a per-rail summary, so a skill that mixes
-  rails reports each separately.
+- **Rails:** every skill step is paid **through the SELAT Router**. The step's
+  rail describes the router's outbound leg to the upstream: Gateway-batched
+  (same-rail passthrough, for upstreams that take Circle Gateway themselves) or
+  erc-3009 / tempo-native MPP (cross-protocol translation). A run prints a
+  per-rail summary, so a skill that mixes rails reports each separately.
 - **Params:** pass a skill's inputs as `--flags` (e.g. `--handle openai`).
   `--chain` and `--max-amount` are reserved per-run overrides applied to every step.
   The `--chain` you pay on must match the chain your Gateway balance lives on: if
@@ -104,7 +105,7 @@ each is a folder with `SKILL.md`, `manifest.json`, `references/endpoints.md`, an
 `selat` is a thin orchestrator that wires together:
 
 - The **Circle CLI** (`@circle-fin/cli`) — wallet creation, MPC-backed signing, Gateway deposits.
-- The **`selat-pay`** CLI ([SELAT-AI/selat-pay](https://github.com/SELAT-AI/selat-pay)) — probe + sign + retry against the SELAT Router, with direct/routed mode auto-detect.
+- The **`selat-pay`** CLI ([SELAT-AI/selat-pay](https://github.com/SELAT-AI/selat-pay)) — probe + sign + retry against the SELAT Router, auto-detecting the upstream's protocol (Gateway-batched x402 / MPP) to pick the routed outbound leg.
 - The **discovery skill** ([SELAT-AI/selat-discovery](https://github.com/SELAT-AI/selat-discovery)) — federated catalog, intent ranking, payment-plan emission (powers `selat run`).
 - **Agent skills** ([SELAT-AI/selat-skills](https://github.com/SELAT-AI/selat-skills)) — installable catalogue-endpoint recipes (powers `selat skill`).
 
