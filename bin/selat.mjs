@@ -98,9 +98,12 @@ async function main(argv) {
 }
 
 main(process.argv)
-  .then((code) => process.exit(code ?? 0))
+  // exitCode (not process.exit): a hard exit drops piped stdout past ~64KB,
+  // truncating large --json payloads mid-write. Setting exitCode lets Node
+  // flush both streams and exit when the event loop drains.
+  .then((code) => { process.exitCode = code ?? 0; })
   .catch((err) => {
     console.error(fmt.error(`fatal: ${err?.message ?? err}`));
     if (process.env.SELAT_DEBUG === "1" && err?.stack) console.error(err.stack);
-    process.exit(1);
+    process.exitCode = 1;
   });
