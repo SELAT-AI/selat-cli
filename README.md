@@ -55,6 +55,7 @@ Either way you get a real paid API response. No API keys, no native ETH to hold,
 | `selat skill list [--available]` | List installed skills, or the catalog of skills available to install — each with a live **reliability** badge (● ok / ● degraded / ● down / ○ unknown) from the selat-skills auto-verify registry. |
 | `selat skill install <name\|path> [--force]` | Install an **agent skill** by name (from the public [selat-skills](https://github.com/SELAT-AI/selat-skills) registry) or from a local path. |
 | `selat skill run <name> [--param value ...]` | Run an installed agent skill, passing its params as `--flags`. |
+| `selat skill compare "<intent>" [--limit N] [--json] [--pay]` | Vet catalog candidates for an intent **side-by-side, without accounts or keys**: shortlists the top N (default 5) via the same federated discovery as `selat search`, free-probes each candidate's live 402 at its **catalog serviceUrl** (never settles), and prints one aligned table — live price, rail (direct x402 / routed MPP), probe latency, reachability, and the selat-skills registry reliability badge — sorted reachable-first, then price. `--json` for machine consumption. `--pay` adds one **capped settled test call** per candidate (asks for confirmation first; `--yes` to authorize non-interactively; `--max-amount` overrides the per-call cap, which otherwise defaults to live price + 25 % clamped to $1) and saves each response body as an output sample. Apify prepaid-token candidates are probed but skipped by `--pay` — test those with `selat run`. |
 | `selat fund [--chain ... --amount ... --method direct\|eco]` | Top up Gateway balance. Dry-runs first; requires explicit confirm. **Both methods are gasless** — the deposit runs through your Circle Agent Wallet (a smart-contract account) and Circle sponsors the gas, so you never need to hold native ETH. The difference is **destination**: **`--method direct`** keeps the balance on the chain you deposited from; **`--method eco`** sources from Base, Optimism, or Arbitrum but settles the resulting Gateway balance on **Polygon** regardless of source chain. After an Eco deposit, pay and check balance with `--chain polygon` (not the source chain), or the call fails with `insufficient_balance`. |
 | `selat spend [--json\|--wallet 0x..]` | Unified spend report (read-only): settled spend from the `selat-pay` ledger (per-call payments + Apify token buys, with a charged-but-failed/disputable total) plus Apify token utilization (consumed vs remaining, flagging prepaid-balance waste). |
 | `selat setup-policy` | Set Circle spending caps on your Agent Wallet. Requires an email OTP (Circle's policy-write security). Recommended before any deposit > $20. |
@@ -73,6 +74,14 @@ selat skill list --available                 # browse the catalog (with reliabil
 selat skill install twitter-profile-lookup   # install a skill
 selat skill run twitter-profile-lookup --handle openai   # run it
 selat skill run person-lookup --query "Patrick Collison Stripe"
+```
+
+Composing a skill and choosing between competing endpoints? Benchmark them
+first — free:
+
+```bash
+selat skill compare "search the web for recent news" --limit 3   # price/rail/latency/reliability, no spend
+selat skill compare "token prices" --pay --max-amount 0.05       # + one capped settled test call each (confirmed)
 ```
 
 - **Where skills live:** skill content is maintained in the separate, public repo

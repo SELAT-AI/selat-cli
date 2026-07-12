@@ -28,7 +28,8 @@ ${fmt.bold("Commands:")}
   init                  Check skill, Circle auth, Agent Wallet, selat-pay, and config.
   search <intent>       Discover + rank endpoints for a capability (FREE; no wallet, no spend).
   run <intent>          Discover + rank + pay for an x402 service in one pipe.
-  skill <list|run|new|…> List, install, run, author (new/validate) Selat skills.
+  skill <list|run|compare|…> List, install, run, author (new/validate) Selat skills;
+                        compare probes catalog candidates for an intent side-by-side (FREE).
   fund                  Top up Gateway (gasless); --method eco routes Base/Optimism/Arbitrum → Polygon.
   history               Show locally recorded Gateway micropayments.
   spend                 Unified spend report: settled spend + Apify token utilization (read-only).
@@ -42,6 +43,7 @@ ${fmt.bold("Options:")}
 ${fmt.bold("Examples:")}
   selat init
   selat search "enrich a person by name and company"   # free discovery, no spend
+  selat skill compare "search the web" --limit 3        # probe candidates side-by-side, free
   selat run "summarize the latest news on gold prices"
   selat skill install twitter-profile-lookup && selat skill run twitter-profile-lookup --handle openai
   selat history
