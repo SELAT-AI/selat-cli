@@ -168,3 +168,21 @@ test("register still writes the index.json entry on submit", async () => {
   const idx = JSON.parse(await readFile(join(root, "index.json"), "utf8"));
   assert.deepEqual(idx.skills[0], { name: "demo-skill", rail: "routed", kind: "single", description: "Demo skill for submit tests." });
 });
+
+test("an unusable permission probe (gh missing) keeps the plain git-push-to-origin behavior", async () => {
+  const { skillDir } = await makeFixture();
+  const run = makeRunner([
+    ...GIT_OK,
+    // gh is not installed: every gh call fails.
+    { cmd: "gh", args: ["api", "repos/SELAT-AI/selat-skills", "--jq", ".permissions.push"], code: 1, stderr: "gh: command not found" },
+    { cmd: "git", args: ["push", "-u", "origin", BRANCH] },
+    { cmd: "gh", args: ["pr", "create"], code: 1, stderr: "gh: command not found" }
+  ]);
+
+  const res = await submitSkill(skillDir, { run });
+  assert.equal(res.via, "origin", "gh-less setups try the plain origin push first, like before the fork flow");
+  assert.equal(res.pushed, true, "the branch still gets pushed with git alone");
+  assert.equal(res.prUrl, null);
+  assert.match(res.hint, /open the PR manually/);
+  assert.equal(run.find("gh", "api", "user"), undefined, "no fork attempt without a usable gh");
+});

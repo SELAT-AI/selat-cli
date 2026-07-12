@@ -55,6 +55,7 @@ Either way you get a real paid API response. No API keys, no native ETH to hold,
 | `selat skill list [--available]` | List installed skills, or the catalog of skills available to install — each with a live **reliability** badge (● ok / ● degraded / ● down / ○ unknown) from the selat-skills auto-verify registry. |
 | `selat skill install <name\|path> [--force]` | Install an **agent skill** by name (from the public [selat-skills](https://github.com/SELAT-AI/selat-skills) registry) or from a local path. |
 | `selat skill run <name> [--param value ...]` | Run an installed agent skill, passing its params as `--flags`. |
+| `selat skill new/validate/verify/register/submit` | Author and contribute a skill: scaffold → static SOP check → live-402 verify (writes the receipt that gates submission) → index entry → PR to [selat-skills](https://github.com/SELAT-AI/selat-skills). `submit` opens the PR **from your fork by default** unless you have write access to the skills repo; `--fork` / `--no-fork` force either flow. |
 | `selat fund [--chain ... --amount ... --method direct\|eco]` | Top up Gateway balance. Dry-runs first; requires explicit confirm. **Both methods are gasless** — the deposit runs through your Circle Agent Wallet (a smart-contract account) and Circle sponsors the gas, so you never need to hold native ETH. The difference is **destination**: **`--method direct`** keeps the balance on the chain you deposited from; **`--method eco`** sources from Base, Optimism, or Arbitrum but settles the resulting Gateway balance on **Polygon** regardless of source chain. After an Eco deposit, pay and check balance with `--chain polygon` (not the source chain), or the call fails with `insufficient_balance`. |
 | `selat spend [--json\|--wallet 0x..]` | Unified spend report (read-only): settled spend from the `selat-pay` ledger (per-call payments + Apify token buys, with a charged-but-failed/disputable total) plus Apify token utilization (consumed vs remaining, flagging prepaid-balance waste). |
 | `selat setup-policy` | Set Circle spending caps on your Agent Wallet. Requires an email OTP (Circle's policy-write security). Recommended before any deposit > $20. |
@@ -99,6 +100,23 @@ selat skill run person-lookup --query "Patrick Collison Stripe"
 
 Skills are authored to the [Agent Skill SOP](https://github.com/SELAT-AI/selat-discovery/blob/main/references/agent-skill-authoring-sop.md):
 each is a folder with `SKILL.md`, `manifest.json`, `references/endpoints.md`, and `evals/`.
+
+To contribute one, the CLI walks the whole loop inside a checkout of the skills repo:
+
+```bash
+selat skill new my-skill --dir skills      # scaffold (SOP layout)
+selat skill validate ./skills/my-skill     # static SOP check
+selat skill verify   ./skills/my-skill     # live 402 probe per step (free, no spend) — writes the receipt that gates submit
+selat skill submit   ./skills/my-skill     # branch + commit + push + PR to SELAT-AI/selat-skills
+```
+
+`submit` is fork-aware. With write access to the skills repo it pushes the
+branch there (the maintainer flow); otherwise it **forks on demand** via `gh`,
+pushes the branch to your fork as a separate `fork` remote — `origin` is never
+rewired — and opens the PR cross-fork. No `gh` at all? The branch is still
+pushed with plain git and you get the manual `gh pr create` command. `--fork` /
+`--no-fork` force either flow, and `--dry-run` previews the branch, files, and
+PR body without touching git.
 
 ## What this is
 
