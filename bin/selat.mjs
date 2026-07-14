@@ -29,6 +29,7 @@ ${fmt.bold("Commands:")}
   init                  Check skill, Circle auth, Agent Wallet, selat-pay, and config.
   search <intent>       Discover + rank endpoints for a capability (FREE; no wallet, no spend).
   run <intent>          Discover + rank + pay for an x402 service in one pipe.
+                        --dry-run shows the pick + price + command without paying.
   skill <list|run|compare|…> List, install, run, author (new/validate) Selat skills;
                         compare probes catalog candidates for an intent side-by-side (FREE).
   fund                  Top up Gateway (gasless); --method eco routes Base/Optimism/Arbitrum → Polygon.
