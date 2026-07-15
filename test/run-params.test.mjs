@@ -198,3 +198,31 @@ test("paramRetryLine prints the exact copy-pasteable retry command", () => {
     'selat run "current token prices" --param symbols=ETH --param country=us --param location=<location>',
   );
 });
+
+// ---------------------------------------------------------------------
+// Merged parse shape: --param in parseRunArgs / KNOWN_RUN_FLAGS
+// ---------------------------------------------------------------------
+
+test("KNOWN_RUN_FLAGS includes --param and the unknown-flag error lists it", async () => {
+  const { parseRunArgs, KNOWN_RUN_FLAGS } = await import("../lib/commands/run.mjs");
+  assert.ok(KNOWN_RUN_FLAGS.includes("--param"));
+  const got = parseRunArgs(["--pram", "x=1", "weather"]);
+  assert.equal(got.ok, false);
+  assert.ok(got.error.includes("--param"), "unknown-flag error lists --param");
+});
+
+test("parseRunArgs collects repeated --param values and keeps them out of the intent", async () => {
+  const { parseRunArgs } = await import("../lib/commands/run.mjs");
+  const got = parseRunArgs(["--dry-run", "token", "prices", "--param", "symbols=ETH", "--param", "convert=USD"]);
+  assert.equal(got.ok, true);
+  assert.equal(got.intent, "token prices");
+  assert.equal(got.dryRun, true, "--dry-run coexists with --param");
+  assert.deepEqual(got.rawParams, ["symbols=ETH", "convert=USD"]);
+});
+
+test("parseRunArgs rejects --param without a value", async () => {
+  const { parseRunArgs } = await import("../lib/commands/run.mjs");
+  const got = parseRunArgs(["weather", "--param"]);
+  assert.equal(got.ok, false);
+  assert.match(got.error, /--param requires a key=value/);
+});
