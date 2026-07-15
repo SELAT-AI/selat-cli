@@ -5,7 +5,7 @@
  * Usage:
  *   selat init
  *   selat run "<intent>"
- *   selat fund --chain base --amount 2 [--method direct|eco]
+ *   selat fund --chain base --amount 2 [--method direct|eco] [--wait [--timeout <s>]]
  *   selat setup-policy
  *   selat doctor
  */
@@ -31,7 +31,9 @@ ${fmt.bold("Commands:")}
   run <intent>          Discover + rank + pay for an x402 service in one pipe.
   skill <list|run|compare|…> List, install, run, author (new/validate) Selat skills;
                         compare probes catalog candidates for an intent side-by-side (FREE).
-  fund                  Top up Gateway (gasless); --method eco routes Base/Optimism/Arbitrum → Polygon.
+  fund                  Top up your unified Gateway balance (gasless). --wait blocks until the
+                        deposit is spendable (credits take ~5–10 min); --method eco sources from
+                        Base/Optimism/Arbitrum. Offers a browser QR when the wallet is empty.
   history               Show locally recorded Gateway micropayments.
   spend                 Unified spend report: settled spend + Apify token utilization (read-only).
   budget                Show spending caps + remaining budget (read-only; caps are set via setup-policy).
@@ -49,7 +51,7 @@ ${fmt.bold("Examples:")}
   selat run "summarize the latest news on gold prices"
   selat skill install twitter-profile-lookup && selat skill run twitter-profile-lookup --handle openai
   selat history
-  selat fund --chain base --amount 2
+  selat fund --chain base --amount 2 --wait             # block until the deposit is spendable
   selat fund --chain optimism --amount 2 --method eco   # gasless (Base/Optimism/Arbitrum), no ETH gas needed
 `;
 
