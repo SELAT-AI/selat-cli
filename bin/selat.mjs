@@ -18,6 +18,7 @@ import { fund } from "../lib/commands/fund.mjs";
 import { history } from "../lib/commands/history.mjs";
 import { spend } from "../lib/commands/spend.mjs";
 import { budget } from "../lib/commands/budget.mjs";
+import { freeze, unfreeze } from "../lib/commands/freeze.mjs";
 import { setupPolicy } from "../lib/commands/setup-policy.mjs";
 import { skill } from "../lib/commands/skill.mjs";
 import { fmt } from "../lib/ui.mjs";
@@ -38,6 +39,8 @@ ${fmt.bold("Commands:")}
   history               Show locally recorded Gateway micropayments.
   spend                 Unified spend report: settled spend + Apify token utilization (read-only).
   budget                Show spending caps + remaining budget (read-only; caps are set via setup-policy).
+  freeze                Instantly refuse all paid calls (local kill switch; --note "<why>").
+  unfreeze              Resume paid calls after a freeze.
   setup-policy          Set Circle spending limits (recommended before any deposit > $20).
   doctor                Diagnose setup problems (skill, PATH, auth, wallet, config).
 
@@ -90,6 +93,10 @@ async function main(argv) {
       return await history(rest);
     case "budget":
       return await budget(rest);
+    case "freeze":
+      return await freeze(rest);
+    case "unfreeze":
+      return await unfreeze(rest);
     case "spend":
       return await spend(rest);
     case "setup-policy":
