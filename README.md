@@ -139,6 +139,29 @@ PR body without touching git.
 
 It doesn't reimplement any of them — it just wires them together so a new user can get from `selat init` to their first paid response without hand-editing config files.
 
+## Trust model — what "self-custody" actually means here
+
+"Self-custody" gets used loosely, so here is the mechanism. Your wallet is a
+**Circle Agent Wallet**, built on Circle's user-controlled wallet architecture
+with **2-of-2 MPC key management**: the private key never exists in one piece —
+it exists only as two key shares, and **both** are required to sign. Per
+[Circle's docs](https://developers.circle.com/agent-stack/agent-wallets), the
+key shares are **never exposed to the agent** (or to SELAT), and the user
+retains custody — **Circle cannot unilaterally move funds** without your
+involvement. Signing is authorized by your email-OTP login (CLI sessions expire
+after 7 days, so you'll re-enter an OTP periodically), and policy writes —
+spending caps, allowlists — require a **fresh human OTP** every time. Circle's
+public docs don't enumerate where each of the two shares physically lives, and
+we won't invent that detail; what they do state is: two shares, both required
+to sign, neither exposed to the agent, no unilateral movement by Circle.
+
+Where SELAT sits: below all of that. `selat` and `selat-pay` request signatures
+**through the Circle CLI only** — SELAT never sees or holds a private key or
+key share, never holds your funds or Gateway balance, and never holds your
+Circle login credentials. So this is not seed-phrase custody (there is no
+mnemonic to hold) — but it is not classic custodial either: Circle alone cannot
+move your money, and neither can SELAT.
+
 ## Why bother
 
 Without this wrapper, the setup ordeal is:
@@ -174,6 +197,38 @@ The default points at the SELAT Router at `https://router.selat.ai`.
 The `selat-discovery` discovery skill and `selat-pay` ship as npm dependencies, so `npm install -g @selat-ai/selat-cli` pulls everything `selat run` needs — no separate skill install or repo clone. (`SELAT_SKILL_PATH`, or a local `~/.codex/skills` / `~/.claude/skills` checkout, still takes precedence if you're developing the discovery skill.)
 
 **Agent skills** (`selat skill`) are not bundled — they're installed on demand from the public [SELAT-AI/selat-skills](https://github.com/SELAT-AI/selat-skills) repo, so the catalog can grow without a CLI release.
+
+## FAQ
+
+**Does my wallet expire?**
+No — never. The 14-day expiry some testers hit belongs to **Apify prepaid
+tokens** (the ~$1 Bearer tokens `selat run` buys for Apify Actor picks), not to
+the wallet. Your Circle Agent Wallet and its Gateway balance have no expiry.
+What does recur is **login**: Circle CLI sessions expire after 7 days, so
+you'll periodically re-enter an email OTP — that re-authenticates you; it does
+not touch the wallet or the funds.
+
+**I deposited on one chain — where did my money go?**
+Into **one unified Gateway balance**: one balance, spendable from any supported
+chain. The per-chain breakdown you see in `selat doctor` is where the balance
+is held — a routing detail, not a separate account per chain (today the
+`--chain` you pass at pay time points at the chain that holds it — see the
+`selat fund` row above). And your on-chain wallet balance dropping after a
+deposit is by design: the funds moved into Gateway, they are not lost.
+
+**What stops a runaway agent from draining the wallet?**
+A ladder of caps, each at a different scope:
+
+1. **Per call** — `--max-amount` on `selat run` / `selat skill run` / `selat skill compare --pay`: a hard ceiling on any single payment.
+2. **Per session** — `selat budget start --amount <usd>`: a spending tripwire for the current work session (`selat budget stop` disarms; `selat budget` shows state).
+3. **Per day / week / month** — the Circle Agent Wallet that SELAT onboards you into has built-in policy: `selat setup-policy` sets per-transaction, daily, weekly, and monthly caps enforced at the money layer, across every service the agent pays — including ones discovered tomorrow. Policy writes require an email OTP, so an agent can't raise its own limits.
+4. **Freeze** — a `selat freeze` / `unfreeze` kill switch (pause all signing instantly) is in flight ([#73](https://github.com/SELAT-AI/selat-cli/pull/73)).
+
+Keys slice spend by vendor. Wallets slice it by time. A capped API key and a
+capped wallet are the same safety model — a bounded pool with an enforced
+ceiling — sliced differently. The honest trade: wallet caps can't cap
+per-vendor, but the per-transaction ceiling is one no vendor billing dashboard
+offers.
 
 ## License
 
