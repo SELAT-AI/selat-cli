@@ -5,7 +5,7 @@
  * Usage:
  *   selat init
  *   selat run "<intent>"
- *   selat fund --chain base --amount 2 [--method direct|eco] [--wait [--timeout <s>]]
+ *   selat fund --chain base --amount 2 [--method direct|eco] [--wait [--timeout <s>]] [--by-chain]
  *   selat setup-policy
  *   selat doctor
  */
@@ -33,9 +33,10 @@ ${fmt.bold("Commands:")}
                         --dry-run shows the pick + price + command without paying.
   skill <list|run|compare|…> List, install, run, author (new/validate) Selat skills;
                         compare probes catalog candidates for an intent side-by-side (FREE).
-  fund                  Top up your unified Gateway balance (gasless). --wait blocks until the
+  fund                  Top up your Gateway balance. --wait blocks until the
                         deposit is spendable (credits take ~5–10 min); --method eco sources from
-                        Base/Optimism/Arbitrum. Offers a browser QR when the wallet is empty.
+                        Base/Optimism/Arbitrum (gasless). Offers a browser QR when the wallet is
+                        empty. --by-chain shows the per-chain routing detail (default: one number).
   history               Show locally recorded Gateway micropayments.
   spend                 Unified spend report: settled spend + Apify token utilization (read-only).
   budget                Show spending caps + remaining budget (read-only; caps are set via setup-policy).

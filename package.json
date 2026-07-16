@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@selat-ai/selat-discovery": "^0.11.0",
-    "@selat-ai/selat-pay": "^0.9.0"
+    "@selat-ai/selat-pay": "^0.9.0",
+    "qrcode-generator": "2.0.4"
   },
   "overrides": {
     "ws": "8.21.0"

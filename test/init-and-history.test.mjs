@@ -6,8 +6,22 @@ import { chmod, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-import { init } from "../lib/commands/init.mjs";
+import { init, noUsdcHintLines } from "../lib/commands/init.mjs";
 import { ensureSelatPayHistoryDir } from "../lib/selat-pay.mjs";
+
+// Stage-aware funding hint: on a wallet with zero/unknown on-chain USDC,
+// `selat fund` does NOT deposit right away — it first shows a QR / address
+// details to top up the wallet (Step 1); only a re-run deposits into Gateway
+// (Step 2). init's closing hint must say so, or it points users at a command
+// that appears to refuse them (live onboarding feedback).
+test("init's no-USDC hint explains the QR-first, deposit-second flow", () => {
+  const text = noUsdcHintLines().join("\n");
+  assert.match(text, /selat fund --amount 2/);
+  assert.match(text, /first show a QR \/ address details to top up your wallet/);
+  assert.match(text, /then deposit into Gateway/);
+  assert.match(text, /one spendable Gateway balance/);
+  assert.doesNotMatch(text, /base|polygon|optimism|arbitrum/i); // no chain enumeration
+});
 
 test("init --help returns help without running setup", async () => {
   const oldLog = console.log;
