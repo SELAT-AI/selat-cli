@@ -7,6 +7,7 @@ import {
   depositCredited,
   formatElapsed,
   formatUsdc,
+  fundingStageLines,
   qrFundArgs,
   qrShortfall,
   resolveWaitTimeout,
@@ -206,7 +207,7 @@ test("formatElapsed renders seconds and minutes", () => {
   assert.equal(formatElapsed(0), "0s");
 });
 
-test("unified balance display leads with one spendable-anywhere total", () => {
+test("balance display is ONE figure with no chain enumeration by default", () => {
   const lines = unifiedBalanceLines({
     total: 4.04,
     perChain: [
@@ -214,20 +215,40 @@ test("unified balance display leads with one spendable-anywhere total", () => {
       { network: "Polygon", domain: 7, usdc: 4.04 }
     ]
   });
-  assert.match(lines[0], /unified balance: \$4\.04/i);
-  assert.match(lines[0], /spendable from any supported chain/);
-  // Eco settles on Polygon; the per-chain row is demoted to a routing detail
-  // (and zero-balance chains are not listed).
-  assert.match(lines[1], /Polygon \$4\.04/);
-  assert.doesNotMatch(lines[1], /Base/);
-  assert.match(lines[1], /routing detail/);
+  assert.match(lines[0], /Gateway balance: \$4\.04/);
+  assert.match(lines[0], /spendable on any supported chain/);
+  // Chain enumeration confuses (live onboarding feedback): NO per-chain rows
+  // by default — Gateway is one balance, not per-chain buckets.
+  assert.equal(lines.length, 2);
+  for (const line of lines) {
+    assert.doesNotMatch(line, /Base|Polygon/);
+  }
   // The "funds look lost" moment: the by-design note must always be present.
   assert.match(lines.at(-1), /by design/);
   assert.match(lines.at(-1), /not lost/);
 });
 
-test("unified balance display omits the per-chain row when nothing is funded yet", () => {
-  const lines = unifiedBalanceLines({ total: 0, perChain: [{ network: "Base", domain: 6, usdc: 0 }] });
+test("--by-chain opts into the per-chain routing detail", () => {
+  const lines = unifiedBalanceLines({
+    total: 4.04,
+    perChain: [
+      { network: "Base", domain: 6, usdc: 0 },
+      { network: "Polygon", domain: 7, usdc: 4.04 }
+    ]
+  }, { byChain: true });
+  // Eco settles on Polygon; the per-chain row stays demoted to a routing
+  // detail (and zero-balance chains are not listed).
+  assert.match(lines[1], /Polygon \$4\.04/);
+  assert.doesNotMatch(lines[1], /Base/);
+  assert.match(lines[1], /routing detail/);
+  assert.match(lines.at(-1), /by design/);
+});
+
+test("balance display omits per-chain rows even with --by-chain when nothing is funded", () => {
+  const lines = unifiedBalanceLines(
+    { total: 0, perChain: [{ network: "Base", domain: 6, usdc: 0 }] },
+    { byChain: true }
+  );
   assert.equal(lines.length, 2);
   assert.match(lines[0], /\$0\.00/);
   assert.match(lines[1], /by design/);
@@ -240,4 +261,21 @@ test("unreadable balances explain themselves without failing the deposit", () =>
     assert.match(lines[0], /unreadable/);
     assert.match(lines[0], /deposit is unaffected/);
   }
+});
+
+// --- fundingStageLines (stage-explicit empty-wallet framing) --------------------
+
+test("empty-wallet funding is framed as two explicit steps", () => {
+  const lines = fundingStageLines({ shortfall: 2 });
+  const text = lines.join("\n");
+  assert.match(text, /two steps/i);
+  assert.match(text, /Step 1 of 2 — get \$2\.00 USDC to your agent wallet address/);
+  assert.match(text, /QR \/ manual details below/);
+  assert.match(text, /Step 2 of 2 — re-run `selat fund` to deposit/);
+  assert.match(text, /one spendable Gateway balance/);
+});
+
+test("fundingStageLines tolerates a missing shortfall", () => {
+  const text = fundingStageLines({}).join("\n");
+  assert.match(text, /Step 1 of 2 — get USDC to your agent wallet address/);
 });
