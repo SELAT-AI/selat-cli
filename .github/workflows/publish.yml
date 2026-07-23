@@ -13,6 +13,20 @@ name: Publish to npm
 # Triggers:
 #   - Pushing a tag like `v0.2.0` runs the full publish.
 #   - workflow_dispatch lets you run a dry-run from the GitHub UI.
+#
+# PROPAGATION VEHICLE (runbook): this package's version is the ONLY
+# signal the selat-plugins runner uses to refresh existing installs —
+# it reinstalls the runtime when npm `latest` here moves, re-resolving
+# selat-discovery and selat-pay in the process. Therefore every
+# selat-discovery or selat-pay release MUST be followed by a patch
+# release here that bumps the corresponding dependency floor.
+# Checklist for that patch release:
+#   1. package.json: bump "version" + the dep floor(s) (^X.Y.Z)
+#   2. bin/selat.mjs: bump the VERSION constant
+#   3. npm install (refresh lockfile), npm test
+#   4. PR titled `chore(release): vX.Y.Z`, squash-merge, tag, push tag
+#   5. After publish: run selat-plugins' "Sync selat-cli version"
+#      workflow_dispatch and merge its marker PR
 
 on:
   push:
