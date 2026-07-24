@@ -6,8 +6,50 @@ import { chmod, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-import { init, noUsdcHintLines } from "../lib/commands/init.mjs";
+import { init, noUsdcHintLines, walletArg, resolveWalletPreset } from "../lib/commands/init.mjs";
 import { ensureSelatPayHistoryDir } from "../lib/selat-pay.mjs";
+
+// Non-interactive wallet selection (--wallet / SELAT_WALLET) — the escape that
+// lets an agent shell / CI pick a wallet without the TTY prompt, so a Hermes
+// runner no longer has to fake a pseudo-terminal to pipe a digit in.
+const RANKED = [
+  { address: "0xAAaaAAaaAAaaAAaaAAaaAAaaAAaaAAaaAAaaAAaa" },
+  { address: "0xBBbbBBbbBBbbBBbbBBbbBBbbBBbbBBbbBBbbBBbb" },
+  { address: "0xCCccCCccCCccCCccCCccCCccCCccCCccCCccCCcc" },
+];
+
+test("walletArg reads --wallet, --wallet=, then SELAT_WALLET, else null", () => {
+  assert.equal(walletArg(["--wallet", "2"]), "2");
+  assert.equal(walletArg(["--wallet=0xabc"]), "0xabc");
+  assert.equal(walletArg(["--wallet", "new"]), "new");
+  // a following flag is not the value
+  assert.equal(walletArg(["--wallet", "--force"]), process.env.SELAT_WALLET || null);
+  // env fallback
+  const prev = process.env.SELAT_WALLET;
+  process.env.SELAT_WALLET = "3";
+  try {
+    assert.equal(walletArg([]), "3");
+    // an explicit flag still wins over the env var
+    assert.equal(walletArg(["--wallet", "1"]), "1");
+  } finally {
+    if (prev === undefined) delete process.env.SELAT_WALLET; else process.env.SELAT_WALLET = prev;
+  }
+});
+
+test("resolveWalletPreset maps index, address, and 'new'; null on no match", () => {
+  assert.equal(resolveWalletPreset("1", RANKED), RANKED[0].address);
+  assert.equal(resolveWalletPreset("3", RANKED), RANKED[2].address);
+  assert.equal(resolveWalletPreset("new", RANKED), "new");
+  assert.equal(resolveWalletPreset("n", RANKED), "new");
+  // address match is case-insensitive
+  assert.equal(resolveWalletPreset(RANKED[1].address.toUpperCase(), RANKED), RANKED[1].address);
+  // out-of-range index, unknown address, and empty all fail closed (→ caller errors)
+  assert.equal(resolveWalletPreset("0", RANKED), null);
+  assert.equal(resolveWalletPreset("4", RANKED), null);
+  assert.equal(resolveWalletPreset("0xdead", RANKED), null);
+  assert.equal(resolveWalletPreset("", RANKED), null);
+  assert.equal(resolveWalletPreset(null, RANKED), null);
+});
 
 // Stage-aware funding hint: on a wallet with zero/unknown on-chain USDC,
 // `selat fund` does NOT deposit right away — it first shows a QR / address
