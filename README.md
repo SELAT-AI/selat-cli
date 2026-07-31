@@ -1,6 +1,8 @@
 # selat-cli
 
-> **Setup helper and runner for SELAT Agent Payments.**
+> **`selat` is the command-line runner for SELAT Agent Payments: an AI agent discovers, vets, and pays x402 / MPP APIs in USDC — per call, with no API keys, no gas token, and no seed phrase — from the user's own self-custodied Circle Agent Wallet.**
+
+SELAT is a discovery and payment layer for AI agents. The agent states an intent ("search the web", "look up a Twitter profile"); SELAT finds matching paid endpoints across a federated x402 / MPP catalog, ranks them by price, rail, and reliability, and settles the call in USDC. SELAT never holds your keys or your funds.
 
 The package is `@selat-ai/selat-cli`; it installs the `selat` command.
 
@@ -46,7 +48,7 @@ selat skill install twitter-profile-lookup
 selat skill run twitter-profile-lookup --handle openai
 ```
 
-Either way you get a real paid API response. No API keys, no native ETH to hold, no manually-acquired USDC, no scheme branching, no Unix-streams jargon.
+Either way you get a real paid API response. No API keys. No native ETH. No manually-acquired USDC. No payment-scheme branching.
 
 ## Commands
 
@@ -66,12 +68,12 @@ Either way you get a real paid API response. No API keys, no native ETH to hold,
 | `selat doctor` | Diagnose setup problems in one pass. Run when something looks off. |
 | `selat --help` | This page. |
 
-## Agent skills
+## What are agent skills?
 
-Beyond ad-hoc `selat run`, the CLI can install and run **agent skills** — named,
-reusable recipes composed of one or more catalogue API endpoints, paid via
-`selat-pay` and the SELAT Router. Each skill is a declarative manifest (no
-executable code), so installing one only ever writes data.
+An **agent skill** is a named, reusable recipe composed of one or more
+catalogue API endpoints, paid via `selat-pay` and the SELAT Router. Each skill
+is a declarative manifest — no executable code — so installing one only ever
+writes data, never runs it.
 
 ```bash
 selat skill list --available                 # browse the catalog (with reliability badges)
@@ -130,43 +132,48 @@ pushed with plain git and you get the manual `gh pr create` command. `--fork` /
 `--no-fork` force either flow, and `--dry-run` previews the branch, files, and
 PR body without touching git.
 
-## What this is
+## What is selat-cli?
 
-`selat` is a thin orchestrator that wires together:
+`selat` is a thin orchestrator. It wires together four components and reimplements none of them:
 
 - The **Circle CLI** (`@circle-fin/cli`) — wallet creation, MPC-backed signing, Gateway deposits.
 - The **`selat-pay`** CLI ([SELAT-AI/selat-pay](https://github.com/SELAT-AI/selat-pay)) — probe + sign + retry against the SELAT Router, auto-detecting the upstream's protocol (Gateway-batched x402 / MPP) to pick the routed outbound leg.
 - The **discovery skill** ([SELAT-AI/selat-discovery](https://github.com/SELAT-AI/selat-discovery)) — federated catalog, intent ranking, payment-plan emission (powers `selat run`).
 - **Agent skills** ([SELAT-AI/selat-skills](https://github.com/SELAT-AI/selat-skills)) — installable catalogue-endpoint recipes (powers `selat skill`).
 
-It doesn't reimplement any of them — it just wires them together so a new user can get from `selat init` to their first paid response without hand-editing config files.
+One command — `selat init` — takes a new user to their first paid response with no hand-edited config files.
 
-## Trust model — what "self-custody" actually means here
+## How does self-custody work?
 
-"Self-custody" gets used loosely, so here is the mechanism. Your wallet is a
-**Circle Agent Wallet**, built on Circle's user-controlled wallet architecture
-with **2-of-2 MPC key management**: the private key never exists in one piece —
-it exists only as two key shares, and **both** are required to sign. Per
-[Circle's docs](https://developers.circle.com/agent-stack/agent-wallets), the
-key shares are **never exposed to the agent** (or to SELAT), and the user
-retains custody — **Circle cannot unilaterally move funds** without your
-involvement. Signing is authorized by your email-OTP login (CLI sessions expire
-after 7 days, so you'll re-enter an OTP periodically), and policy writes —
-spending caps, allowlists — require a **fresh human OTP** every time. Circle's
-public docs don't enumerate where each of the two shares physically lives, and
-we won't invent that detail; what they do state is: two shares, both required
-to sign, neither exposed to the agent, no unilateral movement by Circle.
+**Your wallet is yours. SELAT never holds your keys, your funds, or your credentials.** Here is the exact mechanism.
 
-Where SELAT sits: below all of that. `selat` and `selat-pay` request signatures
-**through the Circle CLI only** — SELAT never sees or holds a private key or
-key share, never holds your funds or Gateway balance, and never holds your
-Circle login credentials. So this is not seed-phrase custody (there is no
-mnemonic to hold) — but it is not classic custodial either: Circle alone cannot
-move your money, and neither can SELAT.
+Your wallet is a **Circle Agent Wallet**, built on Circle's user-controlled
+wallet architecture with **2-of-2 MPC key management**. The private key never
+exists in one piece: it exists only as two key shares, and **both are required
+to sign**. Per [Circle's docs](https://developers.circle.com/agent-stack/agent-wallets),
+the key shares are **never exposed to the agent — or to SELAT** — and the user
+retains custody: **Circle cannot unilaterally move your funds.**
 
-## Why bother
+Every signature is authorized by your email-OTP login (CLI sessions expire
+after 7 days, so you re-enter an OTP periodically). Policy writes — spending
+caps, allowlists — require a **fresh human OTP every time**, so an agent can
+never raise its own limits.
 
-Without this wrapper, the setup ordeal is:
+SELAT sits below all of that. `selat` and `selat-pay` request signatures
+**through the Circle CLI only**:
+
+- SELAT **never** sees or holds a private key or key share.
+- SELAT **never** holds your funds or your Gateway balance.
+- SELAT **never** holds your Circle login credentials.
+
+This is self-custody without a seed phrase: there is no mnemonic to lose, and
+no counterparty that can spend your money without you — not Circle alone, and
+not SELAT. Stop using SELAT tomorrow and your wallet and balance are still
+yours, through Circle directly.
+
+## Why use selat-cli?
+
+Without it, the setup ordeal is:
 
 1. Install the agent-payment skill manually.
 2. Install Circle CLI manually.
@@ -203,9 +210,9 @@ The `selat-discovery` discovery skill and `selat-pay` ship as npm dependencies, 
 ## FAQ
 
 **Does my wallet expire?**
-No — never. The 14-day expiry some testers hit belongs to **Apify prepaid
-tokens** (the ~$1 Bearer tokens `selat run` buys for Apify Actor picks), not to
-the wallet. Your Circle Agent Wallet and its Gateway balance have no expiry.
+No. Never. Your Circle Agent Wallet and its Gateway balance have no expiry.
+The 14-day expiry some testers hit belongs to **Apify prepaid tokens** (the
+~$1 Bearer tokens `selat run` buys for Apify Actor picks), not to the wallet.
 What does recur is **login**: Circle CLI sessions expire after 7 days, so
 you'll periodically re-enter an email OTP — that re-authenticates you; it does
 not touch the wallet or the funds.
