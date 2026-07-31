@@ -213,8 +213,9 @@ The `selat-discovery` discovery skill and `selat-pay` ship as npm dependencies, 
 
 **Does my wallet expire?**
 No. Never. Your agent wallet and its Gateway balance have no expiry.
-The 14-day expiry some testers hit belongs to **Apify prepaid tokens** (the
-~$1 Bearer tokens `selat run` buys for Apify Actor picks), not to the wallet.
+Only **Apify prepaid tokens** expire — the ~$1 Bearer tokens `selat run`
+buys for Apify Actor picks lapse after 14 days. That's the token, not
+your wallet or your balance.
 What does recur is **login**: signing sessions expire after a few weeks
 (`circle wallet status` shows the time remaining), so you'll periodically
 re-enter an email OTP — that re-authenticates you; it does not touch the
