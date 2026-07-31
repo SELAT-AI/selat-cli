@@ -155,7 +155,7 @@ agent — or to SELAT** — and the user retains custody: **Circle, the custody
 provider, cannot unilaterally move your funds.**
 
 `selat` authorizes every signature through your email-OTP login (sessions
-expire after 7 days, so you re-enter an OTP periodically). Policy writes —
+expire after 28 days, so you re-enter an OTP periodically). Policy writes —
 spending caps, allowlists — require a **fresh human OTP every time**, so an
 agent can never raise its own limits.
 
@@ -214,7 +214,7 @@ The `selat-discovery` discovery skill and `selat-pay` ship as npm dependencies, 
 No. Never. Your agent wallet and its Gateway balance have no expiry.
 The 14-day expiry some testers hit belongs to **Apify prepaid tokens** (the
 ~$1 Bearer tokens `selat run` buys for Apify Actor picks), not to the wallet.
-What does recur is **login**: signing sessions expire after 7 days, so
+What does recur is **login**: signing sessions expire after 28 days, so
 you'll periodically re-enter an email OTP — that re-authenticates you; it does
 not touch the wallet or the funds.
 
