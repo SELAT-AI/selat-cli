@@ -55,7 +55,7 @@ Either way you get a real paid API response. No API keys. No native ETH. No brid
 | Command | What it does |
 |---|---|
 | `selat init` | Full bootstrap. Idempotent — safe to re-run. |
-| `selat run "<intent>"` | Discover + rank + pay in one pipe. Sugar for the discovery skill's `rank.mjs --pick` payment plan. `--param key=value` (repeatable) fills endpoint parameters: path placeholders are substituted, query params appended/replaced, and body params merged for POST hints — when a pick is refused because required params are missing, `selat run` prints which ones and the exact `--param` retry line (nothing is charged). For **Apify** picks, `selat run` uses the prepaid-token model (buy a token via the Router, then call the Actor with a Bearer token) — pass Actor input with `--input '<json>'` or `--input-file <path>`. `--auto-rebuy` (**Apify picks only**) buys a replacement token (~$1, a new spend) and retries once if the token drains mid-run; without it, a depleted token surfaces an error and re-running buys the replacement. On any non-Apify (per-call x402) pick the flag is ignored with a warning. |
+| `selat run "<intent>"` | Discover + rank + pay in one pipe. Sugar for the discovery skill's `rank.mjs --pick` payment plan. `--param key=value` (repeatable) fills endpoint parameters: path placeholders are substituted, query params appended/replaced, and body params merged for POST hints — when a pick is refused because required params are missing, `selat run` prints which ones and the exact `--param` retry line (nothing is charged). For **Apify** picks, `selat run` uses the prepaid-token model (buy a token via the Router, then call the Actor with a Bearer token) — pass Actor input with `--input '<json>'` or `--input-file <path>`. `--auto-rebuy` (**Apify picks only**) buys a replacement token ($1.05 — $1 of Apify credit + SELAT's 5% routing fee; a new spend) and retries once if the token drains mid-run; without it, a depleted token surfaces an error and re-running buys the replacement. On any non-Apify (per-call x402) pick the flag is ignored with a warning. |
 | `selat skill list [--available]` | List installed skills, or the catalog of skills available to install — each with a live **reliability** badge (● ok / ● degraded / ● down / ○ unknown) from the selat-skills auto-verify registry. |
 | `selat skill install <name\|path> [--force]` | Install an **agent skill** by name (from the public [selat-skills](https://github.com/SELAT-AI/selat-skills) registry) or from a local path. |
 | `selat skill run <name> [--param value ...]` | Run an installed agent skill, passing its params as `--flags`. |
@@ -213,9 +213,10 @@ The `selat-discovery` discovery skill and `selat-pay` ship as npm dependencies, 
 
 **Does my wallet expire?**
 No. Never. Your agent wallet and its Gateway balance have no expiry.
-Only **Apify prepaid tokens** expire — the ~$1 Bearer tokens `selat run`
-buys for Apify Actor picks lapse after 14 days. That's the token, not
-your wallet or your balance.
+Only **Apify prepaid tokens** expire — the Bearer tokens `selat run` buys
+for Apify Actor picks ($1.05: $1 of Apify credit + SELAT's 5% routing
+fee) lapse after 14 days. That's the token, not your wallet or your
+balance.
 What does recur is **login**: signing sessions expire after a few weeks
 (`circle wallet status` shows the time remaining), so you'll periodically
 re-enter an email OTP — that re-authenticates you; it does not touch the
