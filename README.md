@@ -48,7 +48,7 @@ selat skill install twitter-profile-lookup
 selat skill run twitter-profile-lookup --handle openai
 ```
 
-Either way you get a real paid API response. No API keys. No native ETH. No manually-acquired USDC. No payment-scheme branching.
+Either way you get a real paid API response. No API keys. No native ETH. No bridging, no chain-picking. No payment-scheme guesswork.
 
 ## Commands
 
