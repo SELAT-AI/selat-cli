@@ -155,8 +155,8 @@ agent — or to SELAT** — and the user retains custody: **Circle, the custody
 provider, cannot unilaterally move your funds.**
 
 `selat` authorizes every signature through your email-OTP login (sessions
-expire after a few weeks — `circle wallet status` shows the exact time
-remaining — so you re-enter an OTP periodically). Policy writes —
+expire — `circle wallet status` shows the time remaining — so you re-enter
+an OTP periodically). Policy writes —
 spending caps, allowlists — require a **fresh human OTP every time**, so an
 agent can never raise its own limits.
 
@@ -216,10 +216,10 @@ No. Never. The on-chain balance and the Circle Gateway balance of your
 wallet have no expiry. Only **Apify prepaid tokens** expire — the Bearer
 tokens `selat run` buys for Apify Actor picks ($1.05: $1 of Apify credit
 + SELAT's 5% fee) lapse after 14 days.
-What does recur is **login**: signing sessions expire after a few weeks
-(`circle wallet status` shows the time remaining), so you'll periodically
-re-enter an email OTP — that re-authenticates you; it does not touch the
-wallet or the funds.
+What does recur is **login**: signing sessions expire (`circle wallet
+status` shows the time remaining), so you'll periodically re-enter an
+email OTP — that re-authenticates you; it does not touch the wallet or
+the funds.
 
 **I deposited on one chain — where did my money go?**
 Into **one unified Gateway balance**: one balance, spendable from any supported
