@@ -60,3 +60,33 @@ test("parseRunArgs yields an empty intent for flag-only argv", () => {
   assert.equal(got.ok, true);
   assert.equal(got.intent, "");
 });
+
+// Review-#2 Tier-2 hardening: help inertness + flag-eating value slots.
+
+test("-h and --help parse as help, never as intent", () => {
+  for (const flag of ["-h", "--help"]) {
+    const r = parseRunArgs([flag]);
+    assert.equal(r.ok, true);
+    assert.equal(r.help, true);
+    // help wins even mixed with other tokens
+    const mixed = parseRunArgs(["scrape", "tweets", flag]);
+    assert.equal(mixed.help, true);
+  }
+});
+
+test("--input refuses a flag-looking value instead of eating it", () => {
+  // `--input --dry-run` used to swallow --dry-run as the JSON and then pay.
+  const r = parseRunArgs(["x", "--input", "--dry-run"]);
+  assert.equal(r.ok, false);
+  assert.match(r.error, /--input requires a value/);
+  // and the legit form still works
+  const ok = parseRunArgs(["x", "--input", "{\"a\":1}", "--dry-run"]);
+  assert.equal(ok.ok, true);
+  assert.equal(ok.inputInline, "{\"a\":1}");
+  assert.equal(ok.dryRun, true);
+});
+
+test("--input-file and --param refuse flag-looking values too", () => {
+  assert.equal(parseRunArgs(["x", "--input-file", "--json"]).ok, false);
+  assert.equal(parseRunArgs(["x", "--param", "--json"]).ok, false);
+});
