@@ -90,3 +90,28 @@ test("--input-file and --param refuse flag-looking values too", () => {
   assert.equal(parseRunArgs(["x", "--input-file", "--json"]).ok, false);
   assert.equal(parseRunArgs(["x", "--param", "--json"]).ok, false);
 });
+
+// --json error contract: machines read stdout; every failure must be a
+// parseable {ok:false, error} there, matching verifyCmd's contract.
+
+test("run --json emits JSON on arg-parse and missing-intent errors", async () => {
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const run = promisify(execFile);
+  for (const argv of [["run", "--json", "--bogus"], ["run", "--json"]]) {
+    const r = await run("node", ["bin/selat.mjs", ...argv]).catch((e) => e);
+    const parsed = JSON.parse(r.stdout.trim());
+    assert.equal(parsed.ok, false);
+    assert.ok(parsed.error.length > 0);
+  }
+});
+
+test("skill run --json emits JSON when the skill is not installed", async () => {
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const run = promisify(execFile);
+  const r = await run("node", ["bin/selat.mjs", "skill", "run", "nope-not-installed", "--json"]).catch((e) => e);
+  const parsed = JSON.parse(r.stdout.trim());
+  assert.equal(parsed.ok, false);
+  assert.match(parsed.error, /not installed/);
+});
