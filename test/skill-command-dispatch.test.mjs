@@ -74,11 +74,14 @@ test("skill install/verify/register/submit each refuse to run without a target",
   }
 });
 
-test("skill verify accepts --json without crashing, and fails on a missing skill", async (t) => {
+test("skill verify accepts --json on either side of the path", async (t) => {
   quiet(t);
   // --json used to assign an undeclared `jsonMode`, throwing a ReferenceError
-  // before verification even started.
-  assert.equal(await skill(["verify", join(tmpdir(), "selat-no-such-skill"), "--json"]), 1);
+  // before verification even started. Written before the path, it also used to
+  // swallow the path as its own value.
+  const missing = join(tmpdir(), "selat-no-such-skill");
+  assert.equal(await skill(["verify", missing, "--json"]), 1);
+  assert.equal(await skill(["verify", "--json", missing]), 1);
 });
 
 test("skill verify surfaces a missing required param as a usage error", async (t) => {
@@ -101,6 +104,7 @@ test("firstPositional skips value-taking flags but not bare ones", () => {
   assert.equal(firstPositional(["verify", "--max-amount", "0.05", "./skill"]), "verify");
   assert.equal(firstPositional(["--max-amount", "0.05", "./skill"]), "./skill");
   assert.equal(firstPositional(["--pay", "./skill"]), "./skill", "--pay takes no value");
+  assert.equal(firstPositional(["--json", "./skill"]), "./skill", "--json takes no value");
   assert.equal(firstPositional(["--force", "--dry-run", "./skill"]), "./skill");
   assert.equal(firstPositional(["--chain", "base"]), undefined);
   assert.equal(firstPositional([]), undefined);
