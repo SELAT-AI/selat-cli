@@ -22,6 +22,7 @@ import { freeze, unfreeze } from "../lib/commands/freeze.mjs";
 import { setupPolicy } from "../lib/commands/setup-policy.mjs";
 import { skill } from "../lib/commands/skill.mjs";
 import { fmt } from "../lib/ui.mjs";
+import { errorChain } from "../lib/debug.mjs";
 import { ensureHarnessPath } from "../lib/host.mjs";
 
 const USAGE = `${fmt.bold("selat")} — agent payment setup helper
@@ -112,13 +113,32 @@ async function main(argv) {
   }
 }
 
+/**
+ * Coerce a command's return value into a process exit code. A command that
+ * returns something that isn't an exit code (a forgotten `return 1`, a Promise,
+ * a raw result object) would otherwise exit 0 and report success for work that
+ * failed — so anything unexpected is reported as a failure instead.
+ */
+function exitCodeFor(value) {
+  if (value == null) return 0;
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 0 || n > 255) {
+    console.error(fmt.error(`internal: command returned ${JSON.stringify(value) ?? String(value)} instead of an exit code — reporting failure`));
+    return 1;
+  }
+  return n;
+}
+
 main(process.argv)
   // exitCode (not process.exit): a hard exit drops piped stdout past ~64KB,
   // truncating large --json payloads mid-write. Setting exitCode lets Node
   // flush both streams and exit when the event loop drains.
-  .then((code) => { process.exitCode = code ?? 0; })
+  .then((code) => { process.exitCode = exitCodeFor(code); })
   .catch((err) => {
-    console.error(fmt.error(`fatal: ${err?.message ?? err}`));
+    // errorChain unwraps `cause`, so a low-level reason (EACCES on the config
+    // file) survives the wrapper message that names what was being done.
+    console.error(fmt.error(`fatal: ${errorChain(err)}`));
     if (process.env.SELAT_DEBUG === "1" && err?.stack) console.error(err.stack);
+    else console.error(fmt.dim("Re-run with SELAT_DEBUG=1 for a stack trace and suppressed-error details."));
     process.exitCode = 1;
   });
