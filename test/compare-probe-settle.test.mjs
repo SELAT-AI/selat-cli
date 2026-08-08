@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
+  diagnoseUnreachable,
   discoverCandidates,
   probeCandidate,
   probeCandidates,
@@ -129,6 +130,48 @@ test("probeCandidates probes every plan and keeps the input order", async () => 
   );
   assert.deepEqual(res.map((r) => r.reachable), [true, false, true]);
   assert.deepEqual(res[2].payArgv[1], "https://b.example/v1");
+});
+
+// ── diagnoseUnreachable ─────────────────────────────────────────────────────
+
+const ROUTER_ERROR = "missing --router-url or SELAT_ROUTER_URL";
+
+test("diagnoseUnreachable stays quiet while any candidate is reachable", () => {
+  assert.equal(diagnoseUnreachable([{ probe: { reachable: true, error: null } }]), null);
+  assert.equal(
+    diagnoseUnreachable([
+      { probe: { reachable: false, error: ROUTER_ERROR } },
+      { probe: { reachable: true, error: null } }
+    ]),
+    null
+  );
+  assert.equal(diagnoseUnreachable([]), null);
+});
+
+test("diagnoseUnreachable blames local setup when every probe failed on the router URL", () => {
+  const diag = diagnoseUnreachable([
+    { probe: { reachable: false, error: ROUTER_ERROR } },
+    { probe: { reachable: false, error: ROUTER_ERROR } }
+  ]);
+  assert.equal(diag.kind, "setup");
+  assert.match(diag.message, /SELAT Router URL is not configured/);
+  assert.match(diag.hint, /selat init/);
+});
+
+test("diagnoseUnreachable blames the candidates when even one failure is remote", () => {
+  const diag = diagnoseUnreachable([
+    { probe: { reachable: false, error: ROUTER_ERROR } },
+    { probe: { reachable: false, error: "connect ETIMEDOUT" } }
+  ]);
+  assert.equal(diag.kind, "candidates");
+  assert.match(diag.message, /no candidate answered .*\(2 probed\)/);
+  assert.equal(diag.hint, null);
+});
+
+test("diagnoseUnreachable also reads bare probe results (verify's steps)", () => {
+  // `verify` reports steps as { reachable, error, … } with no `probe` wrapper.
+  assert.equal(diagnoseUnreachable([{ reachable: false, error: ROUTER_ERROR }]).kind, "setup");
+  assert.equal(diagnoseUnreachable([{ reachable: false, error: null }]).kind, "candidates");
 });
 
 // ── settleCandidate (real spend — capped) ───────────────────────────────────
