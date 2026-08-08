@@ -1,0 +1,171 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import {
+  discoverCandidates,
+  probeCandidate,
+  probeCandidates,
+  settleCandidate
+} from "../lib/compare.mjs";
+
+// `selat skill compare` shells out twice per candidate: rank.mjs for the
+// shortlist, then selat-pay (--probe-only, and with --pay a settled call). These
+// exercise those spawns against stand-in scripts, so the free/paid boundary and
+// the stdout/stderr parsing are pinned without touching the network or money.
+
+const scriptDir = mkdtempSync(join(tmpdir(), "selat-compare-"));
+let scriptSeq = 0;
+
+/** Write a stand-in executable that reports a fixed stdout/stderr/exit code. */
+function fakeScript({ stdout = "", stderr = "", exitCode = 0 } = {}) {
+  const path = join(scriptDir, `fake-${scriptSeq++}.mjs`);
+  writeFileSync(
+    path,
+    [
+      "import { writeFileSync } from 'node:fs';",
+      `writeFileSync(${JSON.stringify(`${path}.argv.json`)}, JSON.stringify(process.argv.slice(2)));`,
+      `process.stdout.write(${JSON.stringify(stdout)});`,
+      `process.stderr.write(${JSON.stringify(stderr)});`,
+      `process.exit(${exitCode});`
+    ].join("\n"),
+    "utf8"
+  );
+  return { path, argv: () => JSON.parse(readFileSync(`${path}.argv.json`, "utf8")) };
+}
+
+/** A resolved selat-pay pointing at a stand-in binary (see lib/selat-pay.mjs). */
+const asSelatPay = (bin) => ({ source: "env-override", bin, binDir: null, packageRoot: null });
+
+const PROBE_JSON = JSON.stringify({
+  mode: "routed-x402",
+  quote: { price: { amount: "8000", formatted: "$0.008000 USDC" } }
+});
+
+const planFor = (url, extra = {}) => ({ endpoint: { url, method: "GET" }, ...extra });
+
+// ── discoverCandidates ──────────────────────────────────────────────────────
+
+test("discoverCandidates asks the ranker for a JSON top-N shortlist", async () => {
+  const rank = fakeScript({
+    stdout: JSON.stringify({ strongMatch: true, note: "close match", results: [{ id: "a" }] })
+  });
+  const res = await discoverCandidates(rank.path, "people enrichment", { limit: 3, refresh: true });
+  assert.deepEqual(res, { strongMatch: true, note: "close match", plans: [{ id: "a" }] });
+  assert.deepEqual(rank.argv(), ["people enrichment", "--json", "--top", "3", "--refresh"]);
+});
+
+test("discoverCandidates defaults the limit and normalizes a resultless payload", async () => {
+  const rank = fakeScript({ stdout: JSON.stringify({}) });
+  const res = await discoverCandidates(rank.path, "gold prices");
+  assert.deepEqual(res, { strongMatch: false, note: null, plans: [] });
+  assert.deepEqual(rank.argv(), ["gold prices", "--json", "--top", "5"]);
+});
+
+test("discoverCandidates surfaces a ranker failure with its stderr attached", async () => {
+  const rank = fakeScript({ stderr: "catalog unreachable", exitCode: 2 });
+  await assert.rejects(discoverCandidates(rank.path, "x"), (err) => {
+    assert.match(err.message, /rank\.mjs exited 2/);
+    assert.equal(err.stderr, "catalog unreachable");
+    return true;
+  });
+});
+
+test("discoverCandidates rejects unparseable ranker output", async () => {
+  const rank = fakeScript({ stdout: "not json" });
+  await assert.rejects(discoverCandidates(rank.path, "x"), /invalid JSON/);
+});
+
+// ── probeCandidate (free — never settles) ───────────────────────────────────
+
+test("probeCandidate reports a live quote and always passes --probe-only", async () => {
+  const pay = fakeScript({ stdout: PROBE_JSON });
+  const res = await probeCandidate(planFor("https://api.example/v1/enrich"), { selatPay: asSelatPay(pay.path) });
+  assert.equal(res.reachable, true);
+  assert.equal(res.mode, "routed-x402");
+  assert.equal(res.livePriceUsd, 0.008);
+  assert.equal(typeof res.latencyMs, "number");
+  assert.equal(res.error, null);
+  assert.deepEqual(res.payArgv, [
+    "GET", "https://api.example/v1/enrich", "--chain", "base", "--max-amount", "0.10"
+  ]);
+  assert.equal(res.hintCapUsd, 0.1);
+  const argv = pay.argv();
+  assert.ok(argv.includes("--probe-only"), "a comparison probe must never settle");
+  assert.equal(argv.at(-1), "--probe-only");
+});
+
+test("probeCandidate reads selat-pay's error line when the probe fails", async () => {
+  const pay = fakeScript({ stderr: "[selat-pay] error: connect ETIMEDOUT\n", exitCode: 1 });
+  const res = await probeCandidate(planFor("https://api.example/v1"), { selatPay: asSelatPay(pay.path) });
+  assert.equal(res.reachable, false);
+  assert.equal(res.error, "connect ETIMEDOUT");
+});
+
+test("probeCandidate treats a 200 with no 402 challenge as unreachable", async () => {
+  const pay = fakeScript({ stdout: '{"ok":true}' });
+  const res = await probeCandidate(planFor("https://api.example/v1"), { selatPay: asSelatPay(pay.path) });
+  assert.equal(res.reachable, false);
+  assert.equal(res.mode, null);
+  assert.equal(res.error, "no x402/MPP challenge");
+});
+
+test("probeCandidate short-circuits a plan with no endpoint, without spawning", async () => {
+  const res = await probeCandidate({ service: { url: "https://provider.example" } }, { selatPay: null });
+  assert.deepEqual(res, {
+    reachable: false, mode: null, livePriceUsd: null, latencyMs: null,
+    error: "no concrete endpoint in the catalog entry", payArgv: null, hintCapUsd: null
+  });
+});
+
+test("probeCandidates probes every plan and keeps the input order", async () => {
+  const pay = fakeScript({ stdout: PROBE_JSON });
+  const res = await probeCandidates(
+    [planFor("https://a.example/v1"), { service: {} }, planFor("https://b.example/v1")],
+    { selatPay: asSelatPay(pay.path) }
+  );
+  assert.deepEqual(res.map((r) => r.reachable), [true, false, true]);
+  assert.deepEqual(res[2].payArgv[1], "https://b.example/v1");
+});
+
+// ── settleCandidate (real spend — capped) ───────────────────────────────────
+
+test("settleCandidate settles under the given cap and reports the HTTP status", async () => {
+  const pay = fakeScript({ stdout: '{"data":"ok"}', stderr: "[selat-pay] status=200\n" });
+  const res = await settleCandidate(
+    ["GET", "https://api.example/v1", "--chain", "base", "--max-amount", "0.10"],
+    { selatPay: asSelatPay(pay.path), capUsd: 0.01, chain: "polygon" }
+  );
+  assert.deepEqual(res, {
+    settled: true,
+    httpStatus: 200,
+    latencyMs: res.latencyMs,
+    stdout: '{"data":"ok"}',
+    error: null
+  });
+  assert.deepEqual(pay.argv(), [
+    "GET", "https://api.example/v1", "--chain", "polygon", "--max-amount", "0.01"
+  ]);
+  assert.ok(!pay.argv().includes("--probe-only"));
+});
+
+test("settleCandidate reports selat-pay's error, or a bare exit code", async () => {
+  const named = fakeScript({ stderr: "[selat-pay] error: insufficient_balance\n", exitCode: 1 });
+  const res = await settleCandidate(["GET", "https://api.example/v1"], {
+    selatPay: asSelatPay(named.path),
+    capUsd: 0.01
+  });
+  assert.equal(res.settled, false);
+  assert.equal(res.httpStatus, null);
+  assert.equal(res.error, "insufficient_balance");
+
+  const silent = fakeScript({ exitCode: 4 });
+  const res2 = await settleCandidate(["GET", "https://api.example/v1"], {
+    selatPay: asSelatPay(silent.path),
+    capUsd: 0.01
+  });
+  assert.equal(res2.error, "selat-pay exited 4");
+});
