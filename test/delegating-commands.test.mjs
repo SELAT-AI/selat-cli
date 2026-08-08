@@ -236,3 +236,13 @@ test("search reports a missing discovery skill", async (t) => {
   quiet(t);
   assert.equal(await withoutSkill(() => search(["gold prices"])), 1);
 });
+
+test("skill compare hard-errors on unknown flags instead of silently dropping them", async () => {
+  // A typo'd --max-ammount used to be silently dropped: the $0.05 cap was
+  // discarded (falling back to the $1/candidate ceiling), --yes suppressed
+  // the confirm, and "0.05" polluted the ranking intent. With --pay that's
+  // paying against a cap the user never set.
+  const { skill } = await import("../lib/commands/skill.mjs");
+  const code = await skill(["compare", "an intent", "--max-ammount", "0.05", "--pay", "--yes"]);
+  assert.equal(code, 1);
+});
