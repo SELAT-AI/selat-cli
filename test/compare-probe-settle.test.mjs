@@ -118,7 +118,7 @@ test("probeCandidate short-circuits a plan with no endpoint, without spawning", 
   const res = await probeCandidate({ service: { url: "https://provider.example" } }, { selatPay: null });
   assert.deepEqual(res, {
     reachable: false, mode: null, livePriceUsd: null, latencyMs: null,
-    error: "no concrete endpoint in the catalog entry", payArgv: null, hintCapUsd: null
+    error: "no concrete https endpoint in the catalog entry", payArgv: null, hintCapUsd: null
   });
 });
 
