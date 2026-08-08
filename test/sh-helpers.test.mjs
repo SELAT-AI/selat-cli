@@ -86,3 +86,15 @@ test("shellQuoteForDisplay leaves safe argv alone and quotes the rest", () => {
   assert.equal(shellQuoteForDisplay("it's"), `'it'\\''s'`);
   assert.equal(shellQuoteForDisplay(""), "''");
 });
+
+test("a signal-killed child is a failure, not exit 0", async () => {
+  // `code ?? 0` mapped Node's code=null (signal death) to success, so a
+  // killed selat-pay reported "paid — settled". A kill must surface non-zero.
+  const p = sh("sleep", ["5.0421"]); // unique argv so pkill can't hit a bystander
+  await new Promise((r) => setTimeout(r, 200));
+  const { execSync } = await import("node:child_process");
+  try { execSync("pkill -TERM -f '^sleep 5\\.0421$'"); } catch {}
+  const res = await p;
+  assert.notEqual(res.code, 0);
+  assert.match(res.stderr, /killed by SIGTERM/);
+});
