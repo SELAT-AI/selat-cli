@@ -49,3 +49,15 @@ test("a Windows-style path is treated as a path on any platform", async () => {
 test("an empty name is not reported as present", async () => {
   assert.equal(await hasBin(""), false);
 });
+
+test("an explicit path to a DIRECTORY is not a binary", async () => {
+  // existsSync alone answered true here (e.g. CIRCLE_BIN pointing at the
+  // install folder instead of the binary inside it); the check must require a
+  // regular file so the failure surfaces at doctor/detection time, not as a
+  // confusing EACCES/EISDIR at spawn time.
+  const { mkdtempSync } = await import("node:fs");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const dir = mkdtempSync(join(tmpdir(), "hasbin-dir-"));
+  assert.equal(await hasBin(dir), false);
+});
