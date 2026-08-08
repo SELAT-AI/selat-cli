@@ -150,14 +150,16 @@ test("doctor's spending-policy lines never name a chain", () => {
 });
 
 test("setup-policy args: chain defaults silently to BASE; --chain is an advanced override", () => {
-  assert.deepEqual(parseSetupPolicyArgs([]), { chain: "BASE" });
-  assert.deepEqual(parseSetupPolicyArgs(undefined), { chain: "BASE" });
-  assert.deepEqual(parseSetupPolicyArgs(["--chain", "matic"]), { chain: "MATIC" });
-  assert.deepEqual(parseSetupPolicyArgs(["--chain=op"]), { chain: "OP" });
+  assert.equal(parseSetupPolicyArgs([]).chain, "BASE");
+  assert.equal(parseSetupPolicyArgs(undefined).chain, "BASE");
+  assert.equal(parseSetupPolicyArgs(["--chain", "matic"]).chain, "MATIC");
+  assert.equal(parseSetupPolicyArgs(["--chain=op"]).chain, "OP");
   // a following flag is not a chain value; empty inline value keeps default
-  assert.deepEqual(parseSetupPolicyArgs(["--chain", "--json"]), { chain: "BASE" });
-  assert.deepEqual(parseSetupPolicyArgs(["--chain="]), { chain: "BASE" });
-  assert.deepEqual(parseSetupPolicyArgs(["--chain"]), { chain: "BASE" });
+  assert.equal(parseSetupPolicyArgs(["--chain", "--json"]).chain, "BASE");
+  assert.equal(parseSetupPolicyArgs(["--chain="]).chain, "BASE");
+  assert.equal(parseSetupPolicyArgs(["--chain"]).chain, "BASE");
+  // an unsupported flag is reported, not silently swallowed
+  assert.deepEqual(parseSetupPolicyArgs(["--chain", "--json"]).unknown, ["--json"]);
 });
 
 // End-to-end: `selat budget` (human + --json) against the fake Circle CLI.
