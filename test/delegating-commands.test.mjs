@@ -246,3 +246,15 @@ test("skill compare hard-errors on unknown flags instead of silently dropping th
   const code = await skill(["compare", "an intent", "--max-ammount", "0.05", "--pay", "--yes"]);
   assert.equal(code, 1);
 });
+
+test("skill run: firstPositional resolves the name past leading flags, incl. bare --raw-key", async () => {
+  // Regression guard: firstPositional accepts flags before the name, but the
+  // flag loop used to slice args[0] — dropping a leading flag (a lost
+  // --max-amount ran under the manifest ceiling). raw-key must be bare here or
+  // it consumes the name as its value.
+  const { firstPositional } = await import("../lib/commands/skill.mjs");
+  assert.equal(firstPositional(["--max-amount", "0.05", "my-skill"]), "my-skill");
+  assert.equal(firstPositional(["--json", "my-skill"]), "my-skill");
+  assert.equal(firstPositional(["--raw-key", "my-skill"]), "my-skill");
+  assert.equal(firstPositional(["my-skill", "--json"]), "my-skill");
+});
