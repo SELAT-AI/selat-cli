@@ -8,6 +8,7 @@ import {
   missingPlanParams,
   paramRetryLine,
   parseParamFlags,
+  replanUrlParams,
   remainingPathPlaceholders,
   remainingTemplateQueryParams,
 } from "../lib/run-params.mjs";
@@ -162,6 +163,30 @@ test("applyParamsToPayArgs keeps documented body params in the JSON body", () =>
   assert.equal(r.ok, true);
   assert.equal(r.args[1], "https://api.example.com/search?convert=USD");
   assert.equal(r.args[r.args.indexOf("--body") + 1], '{"query":"agentic payments"}');
+});
+
+test("replanUrlParams excludes body-only params from the re-plan URL", () => {
+  const plan = {
+    requiresBodyParams: true,
+    missingBodyParams: ["query"],
+    bodyParams: [{ name: "query", type: "string" }],
+  };
+  assert.deepEqual(replanUrlParams(plan, [["query", "agentic payments"]]), []);
+});
+
+test("replanUrlParams keeps only required path/query params for the URL", () => {
+  const plan = {
+    requiresPathParams: true,
+    pathPlaceholders: ["{symbol}"],
+    requiresQueryParams: true,
+    missingQueryParams: ["convert"],
+    requiresBodyParams: true,
+    missingBodyParams: ["query"],
+  };
+  assert.deepEqual(
+    replanUrlParams(plan, [["symbol", "ETH"], ["convert", "USD"], ["query", "agentic payments"], ["extra", "x"]]),
+    [["symbol", "ETH"], ["convert", "USD"]],
+  );
 });
 
 test("applyParamsToPayArgs routes missingQueryParams keys to the URL", () => {
