@@ -11,8 +11,10 @@ import {
   defaultSkillPath,
   findSkill,
   packagedSkillPath,
+  skillPackageVersion,
   skillCandidates,
-  skillInstallLines
+  skillInstallLines,
+  skillSource
 } from "../lib/skill.mjs";
 
 // Every delegating command (run/search/history/spend) locates the discovery
@@ -71,6 +73,15 @@ test("findSkill reports the dir holding the required script", () => {
     assert.equal(found.requiredScript, "rank.mjs");
     assert.deepEqual(found.checked, [dir]);
     assert.equal(findSkill("setup.mjs").found, true);
+  });
+});
+
+test("skillPackageVersion and skillSource describe local overrides", () => {
+  const dir = fakeSkill(["rank.mjs"]);
+  writeFileSync(join(dir, "package.json"), JSON.stringify({ name: "@selat-ai/selat-discovery", version: "0.1.2" }));
+  withEnv(dir, () => {
+    assert.equal(skillPackageVersion(dir), "0.1.2");
+    assert.equal(skillSource(dir), "env-override");
   });
 });
 

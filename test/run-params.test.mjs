@@ -148,6 +148,22 @@ test("applyParamsToPayArgs keeps documented query params on the URL even for POS
   assert.equal(r.args[r.args.indexOf("--body") + 1], '{"note":"hi"}');
 });
 
+test("applyParamsToPayArgs keeps documented body params in the JSON body", () => {
+  const plan = {
+    bodyParams: [{ name: "query", type: "string" }],
+    missingBodyParams: ["query"],
+    queryParams: [{ name: "convert", type: "string" }],
+  };
+  const r = applyParamsToPayArgs(
+    ["POST", "https://api.example.com/search", "--chain", "base", "--max-amount", "0.05", "--body", "{}"],
+    [["query", "agentic payments"], ["convert", "USD"]],
+    plan,
+  );
+  assert.equal(r.ok, true);
+  assert.equal(r.args[1], "https://api.example.com/search?convert=USD");
+  assert.equal(r.args[r.args.indexOf("--body") + 1], '{"query":"agentic payments"}');
+});
+
 test("applyParamsToPayArgs routes missingQueryParams keys to the URL", () => {
   const plan = { missingQueryParams: ["symbols"] };
   const r = applyParamsToPayArgs(
@@ -181,6 +197,15 @@ test("missingPlanParams reads requiresQueryParams / requiresPathParams plans wit
   assert.deepEqual(missingPlanParams(templated), [
     { kind: "path", name: "symbol", type: "string", enumValues: ["BTC", "ETH"] },
     { kind: "path", name: "rest" },
+  ]);
+
+  const bodyHungry = {
+    requiresBodyParams: true,
+    missingBodyParams: ["query"],
+    bodyParams: [{ name: "query", type: "string", description: "Search query", example: "gold" }],
+  };
+  assert.deepEqual(missingPlanParams(bodyHungry), [
+    { kind: "body", name: "query", type: "string", description: "Search query", example: "gold" },
   ]);
 
   assert.deepEqual(missingPlanParams({}), []);
