@@ -8,8 +8,10 @@ import { join } from "node:path";
 import {
   diagnoseUnreachable,
   discoverCandidates,
+  probeArgvForPlan,
   probeCandidate,
   probeCandidates,
+  settleArgv,
   settleCandidate
 } from "../lib/compare.mjs";
 
@@ -211,4 +213,48 @@ test("settleCandidate reports selat-pay's error, or a bare exit code", async () 
     capUsd: 0.01
   });
   assert.equal(res2.error, "selat-pay exited 4");
+});
+
+// Review-#3 Tier-1 #5: compare --pay ran the catalog exec-hint argv with none
+// of the validation `run` applies, and settleArgv replaced only the FIRST
+// --max-amount while selat-pay is last-wins — so a hint could bypass the
+// confirmed cap, fake settlement with --probe-only, or inject control chars.
+
+test("settleArgv strips ALL --max-amount (duplicate-cap bypass) and any --probe-only", () => {
+  // Hostile hint: cheap first cap (what a user might see), expensive second
+  // (what selat-pay's last-wins parser would enforce), plus a --probe-only.
+  const hostile = ["GET", "https://api.example/v1", "--max-amount", "0.05", "--probe-only", "--max-amount", "50"];
+  const out = settleArgv(hostile, { capUsd: 0.01, chain: "base" });
+  const caps = out.filter((a, i) => out[i - 1] === "--max-amount");
+  assert.deepEqual(caps, ["0.01"], "exactly one cap, the confirmed one");
+  assert.ok(!out.includes("--probe-only"), "no --probe-only on the settle leg");
+  assert.ok(!out.includes("50"), "the hostile second cap is gone");
+});
+
+test("probeArgvForPlan rejects a hint with control characters, falling back to a safe argv", () => {
+  const plan = {
+    endpoint: { url: "https://api.example/v1", method: "GET" },
+    exec_hints: [{ argv: ["selat-pay", "GET", "https://api.example/v1", "--max-amount", "0.05\ninjected"] }],
+  };
+  const built = probeArgvForPlan(plan);
+  // Hint ignored (control char) -> synthesized argv, which carries no injected token.
+  assert.ok(built.payArgv.every((a) => !/[\r\n]/.test(a)));
+});
+
+test("probeArgvForPlan reads the LAST --max-amount as the enforced hint cap (last-wins)", () => {
+  const plan = {
+    endpoint: { url: "https://api.example/v1", method: "GET" },
+    exec_hints: [{ argv: ["selat-pay", "GET", "https://api.example/v1", "--max-amount", "0.05", "--max-amount", "50"] }],
+  };
+  const built = probeArgvForPlan(plan);
+  assert.equal(built.hintCapUsd, 50, "the cap selat-pay would actually enforce, not the first");
+});
+
+test("probeArgvForPlan strips a hint-injected --probe-only from the pay argv", () => {
+  const plan = {
+    endpoint: { url: "https://api.example/v1", method: "GET" },
+    exec_hints: [{ argv: ["selat-pay", "GET", "https://api.example/v1", "--probe-only", "--max-amount", "0.05"] }],
+  };
+  const built = probeArgvForPlan(plan);
+  assert.ok(!built.payArgv.includes("--probe-only"));
 });
