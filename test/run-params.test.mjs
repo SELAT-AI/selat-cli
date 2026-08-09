@@ -251,3 +251,32 @@ test("parseRunArgs rejects --param without a value", async () => {
   assert.equal(got.ok, false);
   assert.match(got.error, /--param requires a key=value/);
 });
+
+// Review-#3 #11: PARAM_KEY_RE permits array-param keys (items[0], a.b) whose
+// chars are regex metacharacters. They were spliced raw into `new RegExp`, so
+// `items[0` threw an unterminated-character-class SyntaxError (crashing
+// `selat run`), and `a.b` matched the wrong path segment. Keys are now escaped.
+
+test("bracket/dot param keys don't crash applyParamsToUrl and substitute literally", () => {
+  // The crash case (unbalanced bracket the key regex still admits).
+  const r1 = parseParamFlags(["items[0=x"]);
+  assert.doesNotThrow(() => applyParamsToUrl("https://e.x/{items[0}", r1.params));
+  // Balanced array key substitutes its own placeholder.
+  const r2 = parseParamFlags(["items[0]=v"]);
+  assert.equal(applyParamsToUrl("https://e.x/{items[0]}", r2.params).url, "https://e.x/v");
+  // Dot key is matched literally, not as "a<any>b".
+  const r3 = parseParamFlags(["a.b=1"]);
+  assert.equal(applyParamsToUrl("https://e.x/{a.b}", r3.params).url, "https://e.x/1");
+  // ...and a dot key does NOT match a different segment that regex-. would:
+  // {aXb} is left intact (not substituted to 1); the unmatched param falls
+  // through to a query param, as any non-placeholder param does.
+  const r4 = parseParamFlags(["a.b=1"]);
+  const out4 = applyParamsToUrl("https://e.x/{aXb}", r4.params).url;
+  assert.ok(out4.includes("{aXb}"), out4);        // placeholder untouched (no regex . match)
+  assert.ok(!/\/1(\?|$)/.test(out4), out4);        // not substituted into the path
+});
+
+test("bracket param key does not crash the :param path-segment form either", () => {
+  const r = parseParamFlags(["id[0]=7"]);
+  assert.doesNotThrow(() => applyParamsToUrl("https://e.x/:id[0]", r.params));
+});
