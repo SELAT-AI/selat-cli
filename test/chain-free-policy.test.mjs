@@ -7,12 +7,15 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
-// Design principle: the chain must NEVER appear in the user's money model —
-// balance, spending, or policy. Chains are internal routing detail only.
-// These tests pin (a) the truthful cap-state read (`circle wallet limit
-// budget` is the source of truth; the plain `limit` read is inconsistent
-// across query chains — verified live) and (b) chain-free rendering of every
-// policy/budget surface.
+// Design principle, REVISED 2026-08-11: the BALANCE and BUDGET surfaces stay
+// chain-free (Gateway is one balance; the budget rows read identically on
+// every query chain), but the spending POLICY is per-(wallet, chain) and
+// Circle enforces the source chain's row — so policy display is per-chain
+// truthful (see per-chain-policy.test.mjs). What an earlier note here called
+// an "inconsistent" plain `limit` read was the per-chain truth: the CUSTOM
+// caps existed on one chain only. These tests pin (a) spendingPolicy() as the
+// wallet-aggregate "did the user set caps anywhere" read (budget-surface
+// first) and (b) chain-free rendering of the budget/balance surfaces.
 
 const dir = mkdtempSync(join(tmpdir(), "selat-chain-free-"));
 
@@ -45,7 +48,6 @@ chmodSync(fakeCircle, 0o755);
 process.env.CIRCLE_BIN = fakeCircle;
 const { spendingPolicy, policyFromBudget, describePolicy } = await import("../lib/circle.mjs");
 const { budgetUserSummary } = await import("../lib/commands/budget.mjs");
-const { policyDoctorLines } = await import("../lib/commands/doctor.mjs");
 const { parseSetupPolicyArgs } = await import("../lib/commands/setup-policy.mjs");
 
 const ADDRESS = "0xb291279be48742f0a1e9ed15c8d6d2d09ea9e4da";
@@ -128,36 +130,15 @@ test("describePolicy and budgetUserSummary never name a chain", () => {
   for (const s of summaries) assert.doesNotMatch(s, CHAIN_TOKENS, s);
 });
 
-test("doctor's spending-policy lines never name a chain", () => {
-  const cases = [
-    policyDoctorLines({ readable: false }),
-    policyDoctorLines(null),
-    policyDoctorLines({ readable: true, custom: false }),
-    policyDoctorLines({ readable: true, custom: true, limits: { perTx: 5, daily: 50, weekly: 200, monthly: 500 } })
-  ];
-  for (const lines of cases) {
-    assert.ok(lines.length >= 1);
-    for (const line of lines) {
-      assert.ok(["pass", "warn", "dim"].includes(line.level));
-      assert.doesNotMatch(line.text, CHAIN_TOKENS, line.text);
-    }
-  }
-  // the capped wallet still reads its true caps
-  assert.equal(
-    policyDoctorLines({ readable: true, custom: true, limits: { perTx: 5, daily: 50, weekly: 200, monthly: 500 } })[0].text,
-    "capped at $5/tx · $50/day · $200/wk · $500/mo"
-  );
-});
-
-test("setup-policy args: chain defaults silently to BASE; --chain is an advanced override", () => {
-  assert.equal(parseSetupPolicyArgs([]).chain, "BASE");
-  assert.equal(parseSetupPolicyArgs(undefined).chain, "BASE");
+test("setup-policy args: no --chain means every chain (null); --chain scopes to one", () => {
+  assert.equal(parseSetupPolicyArgs([]).chain, null);
+  assert.equal(parseSetupPolicyArgs(undefined).chain, null);
   assert.equal(parseSetupPolicyArgs(["--chain", "matic"]).chain, "MATIC");
   assert.equal(parseSetupPolicyArgs(["--chain=op"]).chain, "OP");
   // a following flag is not a chain value; empty inline value keeps default
-  assert.equal(parseSetupPolicyArgs(["--chain", "--json"]).chain, "BASE");
-  assert.equal(parseSetupPolicyArgs(["--chain="]).chain, "BASE");
-  assert.equal(parseSetupPolicyArgs(["--chain"]).chain, "BASE");
+  assert.equal(parseSetupPolicyArgs(["--chain", "--json"]).chain, null);
+  assert.equal(parseSetupPolicyArgs(["--chain="]).chain, null);
+  assert.equal(parseSetupPolicyArgs(["--chain"]).chain, null);
   // an unsupported flag is reported, not silently swallowed
   assert.deepEqual(parseSetupPolicyArgs(["--chain", "--json"]).unknown, ["--json"]);
 });
