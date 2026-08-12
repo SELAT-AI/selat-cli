@@ -11,6 +11,7 @@ import {
   parseOnrampSession
 } from "../lib/onramp.mjs";
 import { sendUsdcLines } from "../lib/commands/init.mjs";
+import { FUND_HELP, resolveOnrampTarget } from "../lib/commands/fund.mjs";
 import { FUND_QR_CHAINS } from "../lib/qr.mjs";
 
 const WIDGET =
@@ -50,10 +51,47 @@ test("onrampSessionLines carry the URL, expiry, and the Gateway follow-up", () =
   assert.match(lines[0], /card/i);
   assert.equal(lines[1].trim(), WIDGET);
   assert.match(lines[2], /~30 min/);
-  assert.match(lines[2], /selat fund/);
+  // A fresh link must come from the always-available command, not "re-run
+  // selat init" — onramp is invokable at any point, not just onboarding.
+  assert.match(lines[2], /selat fund --onramp/);
+  assert.match(lines[2], /deposit into Gateway: selat fund/);
   const noExpiry = onrampSessionLines({ widgetUrl: WIDGET });
   assert.match(noExpiry[2], /one-time/);
-  assert.match(noExpiry[2], /selat fund/);
+  assert.match(noExpiry[2], /selat fund --onramp/);
+});
+
+// `selat fund --onramp` must be reachable for ANY wallet, not just the
+// configured payer — live Hermes feedback: the user funds wallet #1 while
+// wallet #3 is configured, and without --address the agent either funds the
+// wrong wallet or falls back to Circle's Transak flow.
+test("resolveOnrampTarget prefers --address, falls back to the configured wallet", () => {
+  const cfg = "0xb291279be48742f0a1e9ed15c8d6d2d09ea9e4da";
+  const other = "0x5dc0f693952fa8ff9c765af16767d83d553f2b94";
+  assert.deepEqual(
+    resolveOnrampTarget({ args: ["--onramp", "--address", other], configuredAddr: cfg }),
+    { ok: true, address: other }
+  );
+  assert.deepEqual(
+    resolveOnrampTarget({ args: ["--onramp"], configuredAddr: cfg }),
+    { ok: true, address: cfg }
+  );
+  assert.equal(resolveOnrampTarget({ args: ["--onramp"], configuredAddr: null }).ok, false);
+  assert.equal(resolveOnrampTarget({ args: ["--onramp", "--address"], configuredAddr: cfg }).ok, false);
+  assert.equal(
+    resolveOnrampTarget({ args: ["--onramp", "--address", "not-an-address"], configuredAddr: cfg }).ok,
+    false
+  );
+  // A value that would parse as a flag must not be swallowed as an address.
+  assert.equal(
+    resolveOnrampTarget({ args: ["--onramp", "--address", "--yes"], configuredAddr: cfg }).ok,
+    false
+  );
+});
+
+test("fund help documents the onramp path and the Transak distinction", () => {
+  assert.match(FUND_HELP, /--onramp/);
+  assert.match(FUND_HELP, /--address/);
+  assert.match(FUND_HELP, /NOT Transak/);
 });
 
 test("createOnrampSession posts the address and returns the parsed session", async () => {
