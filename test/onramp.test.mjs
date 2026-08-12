@@ -3,11 +3,15 @@ import assert from "node:assert/strict";
 
 import {
   DEFAULT_ONRAMP_SESSION_URL,
+  ONRAMP_CHAIN_KEYS,
+  ONRAMP_TOKENS,
   createOnrampSession,
   onrampExpiryMinutes,
   onrampSessionLines,
   parseOnrampSession
 } from "../lib/onramp.mjs";
+import { sendUsdcLines } from "../lib/commands/init.mjs";
+import { FUND_QR_CHAINS } from "../lib/qr.mjs";
 
 const WIDGET =
   "https://onramp.arc.io/launch/onramp/v1?sessionToken=tok&destinationWallet=0xabc";
@@ -70,9 +74,33 @@ test("createOnrampSession posts the address and returns the parsed session", asy
   assert.equal(captured.opts.method, "POST");
   assert.deepEqual(JSON.parse(captured.opts.body), {
     destinationAddress: "0xabc",
-    userId: "test-user"
+    userId: "test-user",
+    tokens: ["USDC"],
+    chains: ONRAMP_CHAIN_KEYS
   });
   assert.equal(session.widgetUrl, WIDGET);
+});
+
+// Onramp is chain-specific: an UNSCOPED session defaults to USDC on Arc and
+// offers chains (Celo, Linea, Ronin, HyperEVM, …) and tokens (ETH, USDT, …)
+// this CLI has no Gateway deposit path for — a purchase there strands at the
+// address. The default scope must therefore be USDC-only on exactly the
+// chains `selat fund` can deposit from (the widget drops any it doesn't
+// carry, e.g. optimism — verified live 2026-08-11).
+test("default session scope is USDC on the fund-capable chains only", () => {
+  assert.deepEqual(ONRAMP_TOKENS, ["USDC"]);
+  assert.deepEqual(ONRAMP_CHAIN_KEYS, FUND_QR_CHAINS.map((c) => c.key));
+  assert.ok(ONRAMP_CHAIN_KEYS.includes("base"));
+  assert.ok(!ONRAMP_CHAIN_KEYS.includes("arc"));
+});
+
+test("sendUsdcLines carry the address, the chain boundary, and the deposit follow-up", () => {
+  const text = sendUsdcLines("0xabc").join("\n");
+  assert.match(text, /0xabc/);
+  assert.match(text, /same address on every listed chain/);
+  for (const c of FUND_QR_CHAINS) assert.match(text, new RegExp(c.key));
+  assert.match(text, /only these; elsewhere funds can strand/);
+  assert.match(text, /selat fund --amount 2/);
 });
 
 test("createOnrampSession fails closed on HTTP errors and bad payloads", async () => {
