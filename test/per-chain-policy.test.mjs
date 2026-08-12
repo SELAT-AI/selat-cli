@@ -46,7 +46,7 @@ const {
   formatCapList
 } = await import("../lib/circle.mjs");
 const { policyDoctorLines } = await import("../lib/commands/doctor.mjs");
-const { policyPlanLine, circleChainCode } = await import("../lib/commands/fund.mjs");
+const { policyPlanLine, circleChainCode, ecoPolygonPolicyNudgeLines } = await import("../lib/commands/fund.mjs");
 const { sameCaps, planPolicyWrites, plannedOtpCount, parseSetupPolicyArgs } = await import("../lib/commands/setup-policy.mjs");
 
 const ADDRESS = "0xb291279be48742f0a1e9ed15c8d6d2d09ea9e4da";
@@ -193,4 +193,25 @@ test("planPolicyWrites: skip matching CUSTOM, reset+set differing CUSTOM, set DE
 test("setup-policy defaults to every chain (chain: null); --chain scopes one write", () => {
   assert.equal(parseSetupPolicyArgs([]).chain, null);
   assert.equal(parseSetupPolicyArgs(["--chain", "arb"]).chain, "ARB");
+});
+
+// Eco settles into Gateway on Polygon; spends from that balance authorize on
+// Polygon, so the completion nudge points there (not the Base/OP/Arb source).
+test("eco Polygon nudge: silent when Polygon already carries a CUSTOM policy", () => {
+  assert.deepEqual(ecoPolygonPolicyNudgeLines({ readable: true, origin: "CUSTOM", chain: "MATIC" }), []);
+});
+
+test("eco Polygon nudge: warns when Polygon is on Circle's DEFAULT (uncapped)", () => {
+  const lines = ecoPolygonPolicyNudgeLines({ readable: true, origin: "DEFAULT", chain: "MATIC" });
+  assert.equal(lines.length, 2);
+  assert.match(lines[0], /settles into Gateway on Polygon.*not the source chain/);
+  assert.match(lines[1], /no custom cap.*selat setup-policy/);
+});
+
+test("eco Polygon nudge: warns (confirm) when Polygon's policy is unreadable", () => {
+  for (const pol of [null, { readable: false }]) {
+    const lines = ecoPolygonPolicyNudgeLines(pol);
+    assert.equal(lines.length, 2);
+    assert.match(lines[1], /Couldn't read Polygon's policy.*selat setup-policy/);
+  }
 });
