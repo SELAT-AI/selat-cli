@@ -1,6 +1,6 @@
 {
   "name": "@selat-ai/selat-cli",
-  "version": "0.15.15",
+  "version": "0.15.16",
   "description": "Setup helper and runner for SELAT agent payments. Bundles the selat-discovery skill and selat-pay as dependencies; checks Circle CLI and config separately.",
   "type": "module",
   "bin": {
