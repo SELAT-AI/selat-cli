@@ -52,6 +52,29 @@ test("EIP-681 URI carries the right USDC contract and chain id for every fundabl
   );
 });
 
+// The funding list is the intersection of Gateway-supported chains
+// (developers.circle.com/gateway/references/supported-blockchains) and
+// Agent-Wallet-supported chains (developers.circle.com/agent-stack/
+// agent-wallets/supported-blockchains; live: `circle blockchain list`).
+// Chains on only one side must stay out: without Agent Wallet coverage the
+// address isn't user-controlled (funds strand); without Gateway there's no
+// deposit path. See the FUND_QR_CHAINS note in lib/qr.mjs before adding one.
+test("Gateway-only and Agent-Wallet-only chains stay off the funding list", () => {
+  const keys = new Set(FUND_QR_CHAINS.map((c) => c.key));
+  // Gateway-supported but no Agent Wallet SCA (as of 2026-08-12):
+  for (const gatewayOnly of ["hyperevm", "sei", "sonic", "worldchain", "solana"]) {
+    assert.equal(keys.has(gatewayOnly), false, `${gatewayOnly} must not be fundable`);
+    assert.equal(
+      usdcTransferUri({ chainKey: gatewayOnly, address: WALLET, amountUsdc: 2 }),
+      null,
+      `${gatewayOnly} must not yield a funding URI`
+    );
+  }
+  // Agent-Wallet-supported but not Gateway-supported:
+  assert.equal(keys.has("monad"), false, "monad must not be fundable");
+  assert.equal(usdcTransferUri({ chainKey: "monad", address: WALLET, amountUsdc: 2 }), null);
+});
+
 test("URI amounts are USDC base units (6 decimals)", () => {
   assert.equal(toUsdcUnits(2), "2000000");
   assert.equal(toUsdcUnits(1.5), "1500000");
