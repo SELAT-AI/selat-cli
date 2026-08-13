@@ -38,14 +38,26 @@ test("configured wallet outranks a better-funded one (config is explicit intent)
   assert.equal(ranked[1].address, W3); // then funded
 });
 
-test("unknown balances rank below any known balance, listed order otherwise", () => {
+test("unknown balances rank above confirmed-zero, below confirmed-funded", () => {
+  // null = the READ failed, not an empty wallet. Circle API failures come in
+  // bursts, so a funded wallet whose read failed must not sort below an empty
+  // wallet whose read succeeded — rank #1 is the default a plain Enter (or a
+  // non-interactive run) accepts.
   const ranked = rankWalletCandidates({
     wallets: WALLETS,
     balances: { [W2.toLowerCase()]: 0 }, // W1/W3 unknown (null)
   });
-  assert.equal(ranked[0].address, W2); // 0 is still a known balance
-  assert.deepEqual(ranked.slice(1).map((w) => w.address), [W1, W3]);
-  assert.equal(ranked[1].gatewayUsd, null);
+  assert.deepEqual(ranked.map((w) => w.address), [W1, W3, W2]); // unknowns keep listed order
+  assert.equal(ranked[0].gatewayUsd, null);
+  assert.equal(ranked.at(-1).gatewayUsd, 0); // confirmed-empty sorts last
+});
+
+test("confirmed-funded still outranks unknown, by balance desc", () => {
+  const ranked = rankWalletCandidates({
+    wallets: WALLETS,
+    balances: { [W2.toLowerCase()]: 0.25, [W3.toLowerCase()]: 5.84 }, // W1 unknown
+  });
+  assert.deepEqual(ranked.map((w) => w.address), [W3, W2, W1]);
 });
 
 test("does not mutate the input and tolerates empty/missing fields", () => {

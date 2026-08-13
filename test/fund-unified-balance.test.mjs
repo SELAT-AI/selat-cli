@@ -116,7 +116,9 @@ test("unreadable current balance is never credited", () => {
   assert.equal(depositCredited({ baselineTotal: 1, currentTotal: null, amount: 2 }), false);
 });
 
-test("missing baseline falls back to zero", () => {
+test("missing baseline falls back to zero (callers must mark this unverified)", () => {
+  // With no baseline the function can't tell a fresh credit from pre-existing
+  // funds — waitForGatewayCredit surfaces that as verified: false, tested below.
   assert.equal(depositCredited({ baselineTotal: null, currentTotal: 1.8, amount: 2 }), true);
   assert.equal(depositCredited({ baselineTotal: null, currentTotal: 1.7, amount: 2 }), false);
 });
@@ -149,9 +151,31 @@ test("resolves credited once the polled total reflects the deposit", async () =>
     onPoll: () => { polls += 1; }
   });
   assert.equal(res.credited, true);
+  assert.equal(res.verified, true); // known baseline → a real delta was observed
   assert.equal(res.balances.total, 3);
   assert.equal(res.elapsedMs, 20_000); // two sleeps before the crediting read
   assert.equal(polls, 2); // progress rendered before each sleep, not after success
+});
+
+test("null baseline on a pre-funded wallet resolves credited but UNVERIFIED", async () => {
+  // The false-positive fix: baseline read failed before the deposit and the
+  // wallet already held enough to clear the threshold — the loop must not
+  // hang, but the result must carry verified: false so the caller words it
+  // as "can't be told apart from funds already present", never "credited".
+  const { now, sleep } = fakeClock();
+  const res = await waitForGatewayCredit({
+    address: ADDR,
+    amount: 2,
+    baselineTotal: null,
+    timeoutMs: 60_000,
+    intervalMs: 10_000,
+    readBalances: async () => ({ total: 9.77, perChain: [] }), // pre-existing funds
+    sleep,
+    now
+  });
+  assert.equal(res.credited, true);
+  assert.equal(res.verified, false);
+  assert.equal(res.elapsedMs, 0); // resolves on the first read — no hang
 });
 
 test("times out (not credited) when the credit never lands", async () => {
