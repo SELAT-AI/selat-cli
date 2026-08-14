@@ -35,8 +35,9 @@ ${fmt.bold("Commands:")}
                         compare probes catalog candidates for an intent side-by-side (FREE).
   fund                  Top up your Gateway balance. --wait blocks until the
                         deposit is spendable (credits take ~5–10 min); --method eco sources from
-                        Base/Optimism/Arbitrum (gasless). Offers a browser QR when the wallet is
-                        empty. --by-chain shows the per-chain routing detail (default: one number).
+                        Base (gasless; Circle CLI ≥1.0.0's eco coverage). Offers a browser QR when
+                        the wallet is empty. --by-chain shows the per-chain routing detail
+                        (default: one number).
   history               Show locally recorded Gateway micropayments.
   spend                 Unified spend report: settled spend + Apify token utilization (read-only).
   budget                Show spending caps + remaining budget (read-only; caps are set via setup-policy).
@@ -57,7 +58,7 @@ ${fmt.bold("Examples:")}
   selat skill install twitter-profile-lookup && selat skill run twitter-profile-lookup --handle openai
   selat history
   selat fund --chain base --amount 2 --wait             # block until the deposit is spendable
-  selat fund --chain optimism --amount 2 --method eco   # gasless (Base/Optimism/Arbitrum), no ETH gas needed
+  selat fund --chain base --amount 2 --method eco       # gasless (Base is the only eco source), no ETH gas needed
 `;
 
 const VERSION = "0.15.19";
