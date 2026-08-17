@@ -47,7 +47,7 @@ test("onrampExpiryMinutes rounds to whole minutes and floors at 1", () => {
 
 test("onrampSessionLines carry the URL, expiry, and the Gateway follow-up", () => {
   const lines = onrampSessionLines({ widgetUrl: WIDGET, minutesLeft: 30 });
-  assert.equal(lines.length, 3);
+  assert.equal(lines.length, 4);
   assert.match(lines[0], /card/i);
   assert.equal(lines[1].trim(), WIDGET);
   assert.match(lines[2], /~30 min/);
@@ -58,6 +58,19 @@ test("onrampSessionLines carry the URL, expiry, and the Gateway follow-up", () =
   const noExpiry = onrampSessionLines({ widgetUrl: WIDGET });
   assert.match(noExpiry[2], /one-time/);
   assert.match(noExpiry[2], /selat fund --onramp/);
+});
+
+// The KYC-email note must ride with EVERY widget link (agents relay these
+// lines verbatim): the widget's identity check may continue on the user's
+// phone, and it must use the same email as the Circle Agent Wallet login.
+test("onrampSessionLines end with the KYC same-email note", () => {
+  const withEmail = onrampSessionLines({ widgetUrl: WIDGET, walletEmail: "k@example.com" });
+  assert.match(withEmail[3], /KYC/);
+  assert.match(withEmail[3], /phone/);
+  assert.match(withEmail[3], /SAME email/);
+  assert.match(withEmail[3], /k@example\.com/);
+  const noEmail = onrampSessionLines({ widgetUrl: WIDGET });
+  assert.match(noEmail[3], /SAME email as your Circle Agent Wallet login$/);
 });
 
 // `selat fund --onramp` must be reachable for ANY wallet, not just the
