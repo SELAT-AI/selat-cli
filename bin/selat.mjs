@@ -33,11 +33,13 @@ ${fmt.bold("Commands:")}
                         --dry-run shows the pick + price + command without paying.
   skill <list|run|compare|…> List, install, run, author (new/validate) Selat skills;
                         compare probes catalog candidates for an intent side-by-side (FREE).
-  fund                  Top up your Gateway balance. --wait blocks until the
-                        deposit is spendable (credits take ~5–10 min); --method eco sources from
-                        Base (gasless; Circle CLI ≥1.0.0's eco coverage). Offers a browser QR when
-                        the wallet is empty. --by-chain shows the per-chain routing detail
-                        (default: one number).
+  fund                  Top up your Gateway balance. Both deposit methods are
+                        gasless (Circle sponsors the gas); --method eco is just the
+                        faster route, sourcing from Base (Circle CLI ≥1.0.0's eco
+                        coverage). --wait blocks until the deposit is spendable
+                        (credits take ~5–10 min). Offers a browser QR when the
+                        wallet is empty. --by-chain shows the per-chain routing
+                        detail (default: one number).
   history               Show locally recorded Gateway micropayments.
   spend                 Unified spend report: settled spend + Apify token utilization (read-only).
   budget                Show spending caps + remaining budget (read-only; caps are set via setup-policy).
@@ -58,7 +60,7 @@ ${fmt.bold("Examples:")}
   selat skill install twitter-profile-lookup && selat skill run twitter-profile-lookup --handle openai
   selat history
   selat fund --chain base --amount 2 --wait             # block until the deposit is spendable
-  selat fund --chain base --amount 2 --method eco       # gasless (Base is the only eco source), no ETH gas needed
+  selat fund --chain base --amount 2 --method eco       # the faster route (Base is the only eco source); gasless, same as direct
 `;
 
 const VERSION = "0.15.21";
