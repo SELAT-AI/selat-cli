@@ -30,6 +30,22 @@ test("parseRunArgs defaults every flag off", () => {
   );
   assert.equal(got.inputInline, undefined);
   assert.equal(got.inputFile, undefined);
+  assert.equal(got.maxAmount, undefined);
+});
+
+test("parseRunArgs accepts --max-amount and lists it among known flags", () => {
+  assert.ok(KNOWN_RUN_FLAGS.includes("--max-amount"));
+  const got = parseRunArgs(["--max-amount", "0.05", "weather in tokyo"]);
+  assert.equal(got.ok, true);
+  assert.equal(got.maxAmount, 0.05);
+  assert.equal(got.intent, "weather in tokyo");
+});
+
+test("parseRunArgs rejects a missing, flag-like, or non-positive --max-amount", () => {
+  assert.match(parseRunArgs(["x", "--max-amount"]).error, /--max-amount requires a value/);
+  assert.match(parseRunArgs(["x", "--max-amount", "--dry-run"]).error, /--max-amount requires a value/);
+  assert.match(parseRunArgs(["x", "--max-amount", "0"]).error, /must be a positive number/);
+  assert.match(parseRunArgs(["x", "--max-amount", "lots"]).error, /must be a positive number/);
 });
 
 test("parseRunArgs handles value flags and boolean flags together", () => {
@@ -94,6 +110,15 @@ test("--input-file and --param refuse flag-looking values too", () => {
 
 // --json error contract: machines read stdout; every failure must be a
 // parseable {ok:false, error} there, matching verifyCmd's contract.
+
+test("selat run --help lists --max-amount", async () => {
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const run = promisify(execFile);
+  const r = await run("node", ["bin/selat.mjs", "run", "--help"]);
+  assert.match(r.stdout, /--max-amount <usd>/);
+  assert.match(r.stdout, /default \$1/);
+});
 
 test("run --json emits JSON on arg-parse and missing-intent errors", async () => {
   const { execFile } = await import("node:child_process");
