@@ -221,6 +221,60 @@ test("search --json forwards the ranker's JSON verbatim and skips the footer", a
   assert.deepEqual(calls, [["gold prices", "--json"]], "no second --pick call in machine mode");
 });
 
+test("search --capability is skipped in the intent and forwarded to rank.mjs", async (t) => {
+  quiet(t);
+  const { code, calls } = await withFakeSkill(["rank.mjs"], () =>
+    search(["find", "recent", "papers", "--capability", "web.search", "--top", "3"])
+  );
+  assert.equal(code, 0);
+  assert.deepEqual(calls[0], ["find recent papers", "--top", "3", "--capability", "web.search"]);
+  assert.deepEqual(
+    calls[1],
+    ["find recent papers", "--pick", "--capability", "web.search"],
+    "the probe-next-step pick stays inside the same capability scope"
+  );
+});
+
+test("search omits --capability when the flag is absent", async (t) => {
+  quiet(t);
+  const { calls } = await withFakeSkill(["rank.mjs"], () => search(["gold prices", "--json"]));
+  assert.equal(calls[0].includes("--capability"), false);
+});
+
+test("search --json still forwards --capability", async (t) => {
+  quiet(t);
+  const { code, calls } = await withFakeSkill(["rank.mjs"], () =>
+    search(["need web results", "--json", "--capability", "web.search"])
+  );
+  assert.equal(code, 0);
+  assert.deepEqual(calls, [["need web results", "--json", "--capability", "web.search"]]);
+});
+
+test("search --capability without a value errors and does not spawn the ranker", async (t) => {
+  const errs = [];
+  const error = console.error;
+  console.error = (...a) => { errs.push(a.map(String).join(" ")); };
+  t.after(() => { console.error = error; });
+  const { code, calls } = await withFakeSkill(["rank.mjs"], () => search(["foo", "--capability"]));
+  assert.equal(code, 1);
+  assert.deepEqual(calls, [], "missing value must not silent-widen into an unscoped rank");
+  assert.match(errs.join("\n"), /--capability requires a value/);
+  assert.doesNotMatch(errs.join("\n"), /flag-like/);
+});
+
+test("search --capability --json errors and does not forward --json as the name", async (t) => {
+  const errs = [];
+  const error = console.error;
+  console.error = (...a) => { errs.push(a.map(String).join(" ")); };
+  t.after(() => { console.error = error; });
+  const { code, calls } = await withFakeSkill(["rank.mjs"], () =>
+    search(["foo", "--capability", "--json"])
+  );
+  assert.equal(code, 1);
+  assert.deepEqual(calls, [], "flag-like value must not reach rank.mjs");
+  assert.match(errs.join("\n"), /--capability requires a value \(got flag-like --json\)/);
+});
+
 test("search propagates a ranker failure without asking for a plan", async (t) => {
   quiet(t);
   const { code, calls } = await withFakeSkill(

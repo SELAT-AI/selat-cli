@@ -28,9 +28,11 @@ const USAGE = `${fmt.bold("selat")} — agent payment setup helper
 
 ${fmt.bold("Commands:")}
   init                  Check skill, Circle auth, Agent Wallet, selat-pay, and config.
-  search <intent>       Discover + rank endpoints for a capability (FREE; no wallet, no spend).
+  search <intent>       Discover + rank endpoints (FREE; no wallet, no spend).
+                        --capability <name> scopes to a labeled capability.
   run <intent>          Discover + rank + pay for an x402 service in one pipe.
                         --dry-run shows the pick + price + command without paying.
+                        --capability <name> scopes ranking to a labeled capability.
   skill <list|run|compare|…> List, install, run, author (new/validate) Selat skills;
                         compare probes catalog candidates for an intent side-by-side (FREE).
   fund                  Top up your Gateway balance. --wait blocks until the
