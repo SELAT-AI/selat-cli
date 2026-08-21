@@ -51,6 +51,16 @@ test("parseRunArgs composes --capability with --dry-run, --json, and --live-prob
   assert.equal(r.liveProbe, true);
 });
 
+test("parseRunArgs composes --capability with --max-amount and still refuses a flag-like capability", () => {
+  const ok = parseRunArgs(["x", "--capability", "web.search", "--max-amount", "0.05"]);
+  assert.equal(ok.ok, true);
+  assert.equal(ok.capability, "web.search");
+  assert.equal(ok.maxAmount, 0.05);
+  const refuse = parseRunArgs(["x", "--max-amount", "0.05", "--capability", "--json"]);
+  assert.equal(refuse.ok, false);
+  assert.match(refuse.error, /--capability requires a value \(got flag-like --json\)/);
+});
+
 test("capabilityArgs forwards nothing when omitted", () => {
   assert.deepEqual(capabilityArgs({}), []);
   assert.deepEqual(capabilityArgs({ capability: undefined }), []);
