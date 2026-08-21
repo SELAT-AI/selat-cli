@@ -40,6 +40,22 @@ test("skill rejects an unknown subcommand", async (t) => {
   assert.equal(await skill(["frobnicate"]), 1);
 });
 
+// `skill run` is the only paying subcommand; help on it must be inert like it
+// is on run/fund/setup-policy. Regression for the bug where `--help` fell
+// through as a pass-through param (and `-h` as a skipped non-`--` token) and
+// the skill actually resolved + PAID. An uninstalled name would return 1 if
+// resolution were reached, so a 0 here proves the guard fires first.
+test("skill run treats --help/-h as inert (no resolve, no spend)", async (t) => {
+  quiet(t);
+  for (const help of ["--help", "-h"]) {
+    assert.equal(
+      await skill(["run", "__definitely_not_installed__", help]),
+      0,
+      `skill run <name> ${help} should print help and exit 0 before resolving`
+    );
+  }
+});
+
 test("skill new scaffolds a folder and reports a bad name as a usage error", async (t) => {
   quiet(t);
   const dir = await tmp();
