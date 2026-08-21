@@ -250,6 +250,31 @@ test("search --json still forwards --capability", async (t) => {
   assert.deepEqual(calls, [["need web results", "--json", "--capability", "web.search"]]);
 });
 
+test("search --capability without a value errors and does not spawn the ranker", async (t) => {
+  const errs = [];
+  const error = console.error;
+  console.error = (...a) => { errs.push(a.map(String).join(" ")); };
+  t.after(() => { console.error = error; });
+  const { code, calls } = await withFakeSkill(["rank.mjs"], () => search(["foo", "--capability"]));
+  assert.equal(code, 1);
+  assert.deepEqual(calls, [], "missing value must not silent-widen into an unscoped rank");
+  assert.match(errs.join("\n"), /--capability requires a value/);
+  assert.doesNotMatch(errs.join("\n"), /flag-like/);
+});
+
+test("search --capability --json errors and does not forward --json as the name", async (t) => {
+  const errs = [];
+  const error = console.error;
+  console.error = (...a) => { errs.push(a.map(String).join(" ")); };
+  t.after(() => { console.error = error; });
+  const { code, calls } = await withFakeSkill(["rank.mjs"], () =>
+    search(["foo", "--capability", "--json"])
+  );
+  assert.equal(code, 1);
+  assert.deepEqual(calls, [], "flag-like value must not reach rank.mjs");
+  assert.match(errs.join("\n"), /--capability requires a value \(got flag-like --json\)/);
+});
+
 test("search propagates a ranker failure without asking for a plan", async (t) => {
   quiet(t);
   const { code, calls } = await withFakeSkill(

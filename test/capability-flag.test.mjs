@@ -9,7 +9,7 @@ import {
   rankPickArgv,
   pinArgs,
 } from "../lib/commands/run.mjs";
-import { search, searchRankFlags, searchCapabilityArgs } from "../lib/commands/search.mjs";
+import { search, parseSearchCapability, searchRankFlags, searchCapabilityArgs } from "../lib/commands/search.mjs";
 
 // Layer 0 `--capability` is a CLI passthrough to discovery's rank.mjs. The CLI
 // must parse and forward the flag; it must not interpret names, invent catalog
@@ -99,8 +99,39 @@ test("searchRankFlags forwards --capability and keeps existing flags", () => {
 });
 
 test("searchRankFlags and searchCapabilityArgs omit --capability when the flag is absent", () => {
+  assert.deepEqual(parseSearchCapability(["find papers", "--json"]), { ok: true, argv: [] });
   assert.deepEqual(searchRankFlags(["find papers", "--top", "3"]), ["--top", "3"]);
   assert.deepEqual(searchCapabilityArgs(["find papers", "--json"]), []);
+});
+
+test("search refuses a missing --capability value (not silent omit)", () => {
+  const missing = parseSearchCapability(["foo", "--capability"]);
+  assert.equal(missing.ok, false);
+  assert.equal(missing.error, "--capability requires a value");
+  assert.deepEqual(searchCapabilityArgs(["foo", "--capability"]), missing);
+  assert.deepEqual(searchRankFlags(["foo", "--capability"]), missing);
+});
+
+test("search refuses a flag-like --capability value and does not swallow --json", () => {
+  const flagLike = parseSearchCapability(["foo", "--capability", "--json"]);
+  assert.equal(flagLike.ok, false);
+  assert.equal(flagLike.error, "--capability requires a value (got flag-like --json)");
+  assert.deepEqual(searchCapabilityArgs(["foo", "--capability", "--json"]), flagLike);
+  const flags = searchRankFlags(["foo", "--capability", "--json"]);
+  assert.equal(flags.ok, false);
+  assert.equal(flags.error, flagLike.error);
+  assert.equal(Array.isArray(flags), false, "must not forward --capability --json as ranker argv");
+});
+
+test("searchCapabilityArgs happy path --capability web.search is unchanged", () => {
+  assert.deepEqual(
+    parseSearchCapability(["find papers", "--capability", "web.search"]),
+    { ok: true, argv: ["--capability", "web.search"] },
+  );
+  assert.deepEqual(
+    searchCapabilityArgs(["find papers", "--capability", "web.search"]),
+    ["--capability", "web.search"],
+  );
 });
 
 function captureLog(t) {
