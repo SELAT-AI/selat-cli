@@ -8,6 +8,8 @@ import { join } from "node:path";
 import {
   SKILL_ENV_VAR,
   SKILL_NAME,
+  PLUGIN_RUNTIME_ENV_VAR,
+  ALLOW_LOCAL_SKILL_ENV_VAR,
   defaultSkillPath,
   findSkill,
   packagedSkillPath,
@@ -101,6 +103,47 @@ test("findSkill on a nonexistent override reports the checked path, not a crash"
     const res = findSkill();
     assert.equal(res.found, false);
     assert.deepEqual(res.checked, [nowhere]);
+  });
+});
+
+function withPluginEnv(values, fn) {
+  const saved = new Map();
+  for (const [key, value] of Object.entries(values)) {
+    saved.set(key, process.env[key]);
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+  try {
+    return fn();
+  } finally {
+    for (const [key, value] of saved) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+}
+
+test("plugin mode ignores a local skill unless the developer acknowledgement is set", () => {
+  const local = fakeSkill(["rank.mjs"]);
+  withPluginEnv({
+    [PLUGIN_RUNTIME_ENV_VAR]: "1",
+    [SKILL_ENV_VAR]: local,
+    [ALLOW_LOCAL_SKILL_ENV_VAR]: undefined,
+  }, () => {
+    assert.deepEqual(skillCandidates(), [packagedSkillPath()]);
+    assert.equal(findSkill().path, packagedSkillPath());
+  });
+});
+
+test("plugin mode permits an explicitly acknowledged local developer skill", () => {
+  const local = fakeSkill(["rank.mjs"]);
+  withPluginEnv({
+    [PLUGIN_RUNTIME_ENV_VAR]: "1",
+    [SKILL_ENV_VAR]: local,
+    [ALLOW_LOCAL_SKILL_ENV_VAR]: "1",
+  }, () => {
+    assert.deepEqual(skillCandidates(), [local]);
+    assert.equal(findSkill().path, local);
   });
 });
 
