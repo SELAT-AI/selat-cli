@@ -84,7 +84,7 @@ test("discoverCandidates rejects unparseable ranker output", async () => {
 
 // ── probeCandidate (free — never settles) ───────────────────────────────────
 
-test("probeCandidate reports a live quote and always passes --probe-only", async () => {
+test("probeCandidate reports a live quote and explicitly acknowledges the upstream probe", async () => {
   const pay = fakeScript({ stdout: PROBE_JSON });
   const res = await probeCandidate(planFor("https://api.example/v1/enrich"), { selatPay: asSelatPay(pay.path) });
   assert.equal(res.reachable, true);
@@ -98,7 +98,8 @@ test("probeCandidate reports a live quote and always passes --probe-only", async
   assert.equal(res.hintCapUsd, 0.1);
   const argv = pay.argv();
   assert.ok(argv.includes("--probe-only"), "a comparison probe must never settle");
-  assert.equal(argv.at(-1), "--probe-only");
+  assert.ok(argv.includes("--live-probe"), "a comparison probe must explicitly acknowledge upstream contact");
+  assert.equal(argv.at(-1), "--live-probe");
 });
 
 test("probeCandidate reads selat-pay's error line when the probe fails", async () => {

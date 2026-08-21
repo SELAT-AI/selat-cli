@@ -25,19 +25,20 @@ test("parseRunArgs defaults every flag off", () => {
   const got = parseRunArgs(["weather in tokyo"]);
   assert.equal(got.ok, true);
   assert.deepEqual(
-    { dryRun: got.dryRun, jsonMode: got.jsonMode, verbose: got.verbose, autoRebuy: got.autoRebuy },
-    { dryRun: false, jsonMode: false, verbose: false, autoRebuy: false }
+    { dryRun: got.dryRun, liveProbe: got.liveProbe, jsonMode: got.jsonMode, verbose: got.verbose, autoRebuy: got.autoRebuy },
+    { dryRun: false, liveProbe: false, jsonMode: false, verbose: false, autoRebuy: false }
   );
   assert.equal(got.inputInline, undefined);
   assert.equal(got.inputFile, undefined);
 });
 
 test("parseRunArgs handles value flags and boolean flags together", () => {
-  const got = parseRunArgs(["run actor", "--input", '{"q":1}', "--auto-rebuy", "--json", "--verbose"]);
+  const got = parseRunArgs(["run actor", "--input", '{"q":1}', "--auto-rebuy", "--live-probe", "--json", "--verbose"]);
   assert.equal(got.ok, true);
   assert.equal(got.intent, "run actor");
   assert.equal(got.inputInline, '{"q":1}');
   assert.equal(got.autoRebuy, true);
+  assert.equal(got.liveProbe, true);
   assert.equal(got.jsonMode, true);
   assert.equal(got.verbose, true);
 });

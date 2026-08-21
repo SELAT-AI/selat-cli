@@ -41,12 +41,14 @@ function plan(over = {}) {
 
 // ── probeArgvForPlan: the serviceUrl rule ────────────────────────────────────
 
-test("probeArgvForPlan targets the catalog serviceUrl and appends --probe-only", () => {
+test("probeArgvForPlan targets the catalog serviceUrl and appends explicit live-probe flags", () => {
   const built = probeArgvForPlan(plan());
   assert.equal(built.url, "https://api.demo.com/search");
   assert.equal(built.payArgv[1], "https://api.demo.com/search");
-  assert.equal(built.probeArgv.at(-1), "--probe-only");
+  assert.ok(built.probeArgv.includes("--probe-only"));
+  assert.equal(built.probeArgv.at(-1), "--live-probe");
   assert.ok(!built.payArgv.includes("--probe-only"));
+  assert.ok(!built.payArgv.includes("--live-probe"));
   assert.equal(built.hintCapUsd, 0.0075);
 });
 
