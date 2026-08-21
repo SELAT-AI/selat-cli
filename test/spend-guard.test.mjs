@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtempSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -26,6 +27,7 @@ import {
 import { missingSessionBudget, readSessionConfig } from "../lib/commands/budget.mjs";
 
 const pexec = promisify(execFile);
+const SELAT_BIN = join(dirname(fileURLToPath(import.meta.url)), "..", "bin", "selat.mjs");
 
 test("hard CLI ceiling is $1 for everyone; Apify token is $1.05; raise export aliases $1", () => {
   assert.equal(HARD_CLI_MAX_AMOUNT_USD, 1);
@@ -303,7 +305,7 @@ test("cwd .env with SELAT_SESSION_BUDGET does not arm a paid run", async () => {
   };
   delete env.SELAT_SESSION_BUDGET;
   delete env.SELAT_SESSION_ID;
-  const r = await pexec(process.execPath, ["bin/selat.mjs", "run", "--json", "weather"], { env, cwd: dir }).catch((e) => e);
+  const r = await pexec(process.execPath, [SELAT_BIN, "run", "--json", "weather"], { env, cwd: dir }).catch((e) => e);
   const parsed = JSON.parse(r.stdout.trim());
   assert.equal(parsed.ok, false);
   assert.match(parsed.error, /session budget/);
