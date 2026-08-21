@@ -4,13 +4,13 @@ import { mkdtempSync, writeFileSync, existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
-import { freezeFilePath, readFreeze, freezeStatusLine, noteArg, freeze, unfreeze } from "../lib/commands/freeze.mjs";
+import { freezeFilePath, readFreeze, freezeStatusLine, noteArg, freeze, unfreeze, frozenMoneyMove } from "../lib/commands/freeze.mjs";
+import { fund } from "../lib/commands/fund.mjs";
 import { policyChainDecision } from "../lib/commands/init.mjs";
 import { sessionSpendLine } from "../lib/commands/budget.mjs";
 
-// WS4 remainder: instant local kill switch (`selat freeze`/`unfreeze`),
-// init→setup-policy chaining, confirmation-time session spend line.
-// Enforcement of the freeze flag lives in selat-pay (pre-signature).
+// Local kill switch (`selat freeze`/`unfreeze`): this CLI refuses fund + pay.
+// selat-pay also checks the same flag file pre-signature.
 
 const dir = mkdtempSync(join(tmpdir(), "selat-freeze-cli-"));
 
@@ -49,11 +49,11 @@ test("freezeStatusLine: prominent when frozen, null when not", () => {
   assert.equal(freezeStatusLine(null), null);
   assert.equal(
     freezeStatusLine({ frozenAt: "2026-07-14T01:02:03.000Z", note: "runaway loop" }),
-    "FROZEN since 2026-07-14T01:02:03.000Z — runaway loop · all payments refused · resume: selat unfreeze"
+    "FROZEN since 2026-07-14T01:02:03.000Z — runaway loop · fund + pay from this CLI refused · resume: selat unfreeze"
   );
   assert.equal(
     freezeStatusLine({ frozenAt: null, note: null }),
-    "FROZEN since unknown time · all payments refused · resume: selat unfreeze"
+    "FROZEN since unknown time · fund + pay from this CLI refused · resume: selat unfreeze"
   );
 });
 
@@ -111,6 +111,61 @@ test("policyChainDecision: only an uncapped readable policy triggers the offer",
     { recommend: false, mode: null }
   );
   assert.deepEqual(policyChainDecision({ policy: null, interactive: true }), { recommend: false, mode: null });
+});
+
+test("frozenMoneyMove: absent → null; present → refuse payload that names fund or pay", () => {
+  assert.equal(frozenMoneyMove("fund", { path: join(dir, "nope.json") }), null);
+
+  const f = join(dir, "flag-money.json");
+  writeFileSync(f, JSON.stringify({ frozenAt: "2026-08-21T10:00:00.000Z", note: "stop" }));
+  const pay = frozenMoneyMove("pay", { path: f });
+  assert.match(pay.error, /frozen since 2026-08-21T10:00:00.000Z — stop/);
+  assert.match(pay.error, /will not pay until you run selat unfreeze/);
+  assert.match(pay.hint, /local kill switch for fund \+ pay from this CLI/);
+  assert.match(pay.hint, /does not change Circle wallet policy/);
+
+  const fundBlock = frozenMoneyMove("fund", { path: f });
+  assert.match(fundBlock.error, /will not fund \(deposits \/ onramp\)/);
+});
+
+test("selat fund refuses while frozen, including --onramp; --help stays inert", async () => {
+  const p = join(dir, "flag-fund.json");
+  writeFileSync(p, JSON.stringify({ schema: "selat-pay.freeze/v1", frozenAt: "2026-08-21T10:00:00.000Z" }));
+
+  const capture = () => {
+    const lines = [];
+    const orig = { log: console.log, error: console.error };
+    console.log = (...a) => lines.push(a.join(" "));
+    console.error = (...a) => lines.push(a.join(" "));
+    return { lines, restore: () => Object.assign(console, orig) };
+  };
+
+  await withFreezePath(p, async () => {
+    const help = capture();
+    try {
+      const code = await fund(["--help"], { interactive: false });
+      assert.equal(code, 0);
+      assert.ok(help.lines.join("\n").includes("Usage: selat fund"));
+    } finally { help.restore(); }
+
+    const deposit = capture();
+    try {
+      const code = await fund(["--amount", "2", "--yes", "--chain", "base"], { interactive: false });
+      assert.equal(code, 1);
+      const joined = deposit.lines.join("\n");
+      assert.match(joined, /will not fund \(deposits \/ onramp\)/);
+      assert.match(joined, /local kill switch for fund \+ pay from this CLI/);
+      assert.doesNotMatch(joined, /no TTY to prompt/);
+      assert.doesNotMatch(joined, /agent-payment skill not found/);
+    } finally { deposit.restore(); }
+
+    const onramp = capture();
+    try {
+      const code = await fund(["--onramp"], { interactive: false });
+      assert.equal(code, 1);
+      assert.match(onramp.lines.join("\n"), /will not fund \(deposits \/ onramp\)/);
+    } finally { onramp.restore(); }
+  });
 });
 
 test("sessionSpendLine: armed budget → 'session: $X spent of $Y'; none → null", () => {

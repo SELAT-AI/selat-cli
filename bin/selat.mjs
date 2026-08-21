@@ -41,8 +41,8 @@ ${fmt.bold("Commands:")}
   history               Show locally recorded Gateway micropayments.
   spend                 Unified spend report: settled spend + Apify token utilization (read-only).
   budget                Show spending caps + remaining budget (read-only; caps are set via setup-policy).
-  freeze                Instantly refuse all paid calls (local kill switch; --note "<why>").
-  unfreeze              Resume paid calls after a freeze.
+  freeze                Local kill switch: refuse fund + pay from this CLI (--note "<why>").
+  unfreeze              Resume fund + pay after a freeze.
   setup-policy          Set Circle spending limits (recommended before any deposit > $20).
   doctor                Diagnose setup problems (skill, PATH, auth, wallet, config).
 
