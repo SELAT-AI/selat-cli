@@ -51,15 +51,28 @@ test("compileStep accepts a small manifest cap within the ceiling", () => {
   assert.deepEqual(argv.slice(-2), ["--max-amount", "0.01"]);
 });
 
-test("compileStep treats an explicit --max-amount as user authority, unbounded by the ceiling", () => {
-  // The manifest declares a hostile cap, but the user explicitly overrides it.
-  const { argv } = compileStep(
-    { chain: "base", maxAmount: "1000000" },
-    step(),
-    {},
-    { maxAmount: "5" }
+test("compileStep refuses an explicit --max-amount above the hard CLI ceiling", () => {
+  assert.throws(
+    () => compileStep(
+      { chain: "base", maxAmount: "0.01" },
+      step(),
+      {},
+      { maxAmount: "999" }
+    ),
+    /hard cap \$5|hard CLI ceiling/
   );
-  assert.deepEqual(argv.slice(-2), ["--max-amount", "5"]);
+});
+
+test("compileStep refuses an explicit --max-amount of $5 even with a TTY raise", () => {
+  assert.throws(
+    () => compileStep(
+      { chain: "base", maxAmount: "0.01" },
+      step(),
+      {},
+      { maxAmount: "5", interactive: true, allowHighMaxAmount: true }
+    ),
+    /hard CLI ceiling/
+  );
 });
 
 test("compileStep still validates a malformed user override", () => {

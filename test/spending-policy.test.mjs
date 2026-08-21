@@ -39,7 +39,7 @@ test("budgetUserSummary speaks plainly for capped and uncapped wallets", () => {
 });
 
 // Session budget display + config readers (enforcement lives in selat-pay).
-test("session budget: env config, file config, ledger sum", async () => {
+test("session budget: file arms, env cannot invent, ledger sum", async () => {
   const { readSessionConfig, sessionSpent } = await import("../lib/commands/budget.mjs");
   const { mkdtempSync, writeFileSync } = await import("node:fs");
   const { join } = await import("node:path");
@@ -47,12 +47,22 @@ test("session budget: env config, file config, ledger sum", async () => {
   const dir = mkdtempSync(join(tmpdir(), "selat-cli-session-"));
 
   const env = { SELAT_SESSION_BUDGET: "2", SELAT_SESSION_ID: "t1" };
-  assert.deepEqual(readSessionConfig({ env, filePath: join(dir, "none.json") }), { budgetUsd: 2, sessionId: "t1", source: "env" });
+  assert.equal(readSessionConfig({ env, filePath: join(dir, "none.json") }), null);
 
   const f = join(dir, "session.json");
   writeFileSync(f, JSON.stringify({ sessionId: "file-9", budgetUsd: 1.5 }));
   assert.deepEqual(readSessionConfig({ env: {}, filePath: f }), { budgetUsd: 1.5, sessionId: "file-9", source: "file" });
+  assert.deepEqual(
+    readSessionConfig({ env: { SELAT_SESSION_BUDGET: "0.25" }, filePath: f }),
+    { budgetUsd: 0.25, sessionId: "file-9", source: "file+env" }
+  );
   assert.equal(readSessionConfig({ env: {}, filePath: join(dir, "none.json") }), null);
+  const { missingSessionBudget } = await import("../lib/commands/budget.mjs");
+  const missing = missingSessionBudget({ env: {}, filePath: join(dir, "none.json") });
+  assert.match(missing.error, /budget start/);
+  assert.match(missing.hint, /freeze/);
+  assert.ok(missingSessionBudget({ env, filePath: join(dir, "none.json") }));
+  assert.equal(missingSessionBudget({ env: {}, filePath: f }), null);
 
   const ledger = join(dir, "ledger.jsonl");
   writeFileSync(ledger, [

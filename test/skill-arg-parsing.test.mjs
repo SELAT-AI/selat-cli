@@ -10,6 +10,7 @@ import { validateManifest } from "../lib/skill-registry.mjs";
 test("firstPositional skips value-flag values to find the real positional", () => {
   // The cap value 0.05 must NOT be taken as the path.
   assert.equal(firstPositional(["--max-amount", "0.05", "./skills/foo"]), "./skills/foo");
+  assert.equal(firstPositional(["--allow-high-max-amount", "--max-amount", "3", "my-skill"]), "my-skill");
   assert.equal(firstPositional(["--chain", "base", "--symbols", "ETH", "./skills/foo"]), "./skills/foo");
   // Positional first still works.
   assert.equal(firstPositional(["./skills/foo", "--pay"]), "./skills/foo");
