@@ -54,14 +54,13 @@ test("applyRunMaxAmountCeiling: explicit --max-amount 5 is refused without a TTY
   assert.match(got.reason, /hard CLI ceiling/);
 });
 
-test("applyRunMaxAmountCeiling: TTY raise may set an explicit cap up to $5", () => {
+test("applyRunMaxAmountCeiling: TTY + --allow-high-max-amount still refuses $5", () => {
   const got = applyRunMaxAmountCeiling(
     ["GET", "https://api.example/v1", "--max-amount", "0.05"],
     { explicit: 5, interactive: true, allowHigh: true }
   );
-  assert.equal(got.ok, true);
-  assert.equal(got.capUsd, 5);
-  assert.deepEqual(got.args.slice(-2), ["--max-amount", "5"]);
+  assert.equal(got.ok, false);
+  assert.match(got.reason, /hard CLI ceiling/);
 });
 
 test("applyRunMaxAmountCeiling strips a hostile second --max-amount (last-wins)", () => {

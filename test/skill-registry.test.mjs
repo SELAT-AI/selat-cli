@@ -63,14 +63,16 @@ test("compileStep refuses an explicit --max-amount above the hard CLI ceiling", 
   );
 });
 
-test("compileStep allows an explicit --max-amount of $5 only with a TTY raise", () => {
-  const { argv } = compileStep(
-    { chain: "base", maxAmount: "0.01" },
-    step(),
-    {},
-    { maxAmount: "5", interactive: true, allowHighMaxAmount: true }
+test("compileStep refuses an explicit --max-amount of $5 even with a TTY raise", () => {
+  assert.throws(
+    () => compileStep(
+      { chain: "base", maxAmount: "0.01" },
+      step(),
+      {},
+      { maxAmount: "5", interactive: true, allowHighMaxAmount: true }
+    ),
+    /hard CLI ceiling/
   );
-  assert.deepEqual(argv.slice(-2), ["--max-amount", "5"]);
 });
 
 test("compileStep still validates a malformed user override", () => {

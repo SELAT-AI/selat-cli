@@ -122,9 +122,9 @@ test("paidCapUsd refuses an explicit user cap above the hard CLI ceiling", () =>
   assert.ok(Number.isNaN(paidCapUsd({ explicit: "5" })));
 });
 
-test("paidCapUsd accepts an explicit cap at or under $1, or $5 with a TTY raise", () => {
+test("paidCapUsd accepts an explicit cap at or under $1; TTY cannot raise to $5", () => {
   assert.equal(paidCapUsd({ explicit: "0.05" }), 0.05);
-  assert.equal(paidCapUsd({ explicit: "5", interactive: true, allowHigh: true }), 5);
+  assert.ok(Number.isNaN(paidCapUsd({ explicit: "5", interactive: true, allowHigh: true })));
 });
 
 test("paidCapUsd derives live price + headroom, clamped to the ceiling", () => {
