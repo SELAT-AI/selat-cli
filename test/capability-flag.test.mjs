@@ -1,29 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-import { fileURLToPath } from "node:url";
 
 import {
   parseRunArgs,
+  run as runCmd,
   KNOWN_RUN_FLAGS,
   capabilityArgs,
   rankPickArgv,
   pinArgs,
 } from "../lib/commands/run.mjs";
-import { searchRankFlags, searchCapabilityArgs } from "../lib/commands/search.mjs";
-
-const pexec = promisify(execFile);
-const selatBin = fileURLToPath(new URL("../bin/selat.mjs", import.meta.url));
-
-async function run(args) {
-  try {
-    const { stdout, stderr } = await pexec("node", [selatBin, ...args], { input: "" });
-    return { code: 0, stdout, stderr };
-  } catch (err) {
-    return { code: err.code ?? 1, stdout: err.stdout ?? "", stderr: err.stderr ?? "" };
-  }
-}
+import { search, searchRankFlags, searchCapabilityArgs } from "../lib/commands/search.mjs";
 
 // Layer 0 `--capability` is a CLI passthrough to discovery's rank.mjs. The CLI
 // must parse and forward the flag; it must not interpret names, invent catalog
@@ -117,16 +103,26 @@ test("searchRankFlags and searchCapabilityArgs omit --capability when the flag i
   assert.deepEqual(searchCapabilityArgs(["find papers", "--json"]), []);
 });
 
-test("selat search --help documents --capability", async () => {
-  const { code, stdout } = await run(["search", "--help"]);
+function captureLog(t) {
+  const lines = [];
+  const log = console.log;
+  console.log = (...args) => { lines.push(args.map(String).join(" ")); };
+  t.after(() => { console.log = log; });
+  return { lines, text: () => lines.join("\n") };
+}
+
+test("selat search --help documents --capability", async (t) => {
+  const cap = captureLog(t);
+  const code = await search(["--help"]);
   assert.equal(code, 0);
-  assert.match(stdout, /--capability <name>/);
-  assert.match(stdout, /Layer 0/);
+  assert.match(cap.text(), /--capability <name>/);
+  assert.match(cap.text(), /Layer 0/);
 });
 
-test("selat run --help documents --capability", async () => {
-  const { code, stdout } = await run(["run", "--help"]);
+test("selat run --help documents --capability", async (t) => {
+  const cap = captureLog(t);
+  const code = await runCmd(["--help"]);
   assert.equal(code, 0);
-  assert.match(stdout, /--capability <name>/);
-  assert.match(stdout, /Layer 0/);
+  assert.match(cap.text(), /--capability <name>/);
+  assert.match(cap.text(), /Layer 0/);
 });
