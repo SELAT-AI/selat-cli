@@ -117,8 +117,14 @@ test("sortComparisonRows breaks price ties by probe latency, then score", () => 
 
 // ── paidCapUsd: explicit user cap is authority; derived caps are clamped ────
 
-test("paidCapUsd returns an explicit user cap unclamped", () => {
-  assert.equal(paidCapUsd({ explicit: "5" }), 5);
+test("paidCapUsd refuses an explicit user cap above the hard CLI ceiling", () => {
+  assert.ok(Number.isNaN(paidCapUsd({ explicit: "999" })));
+  assert.ok(Number.isNaN(paidCapUsd({ explicit: "5" })));
+});
+
+test("paidCapUsd accepts an explicit cap at or under $1, or $5 with a TTY raise", () => {
+  assert.equal(paidCapUsd({ explicit: "0.05" }), 0.05);
+  assert.equal(paidCapUsd({ explicit: "5", interactive: true, allowHigh: true }), 5);
 });
 
 test("paidCapUsd derives live price + headroom, clamped to the ceiling", () => {

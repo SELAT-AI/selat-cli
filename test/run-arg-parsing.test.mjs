@@ -25,8 +25,8 @@ test("parseRunArgs defaults every flag off", () => {
   const got = parseRunArgs(["weather in tokyo"]);
   assert.equal(got.ok, true);
   assert.deepEqual(
-    { dryRun: got.dryRun, liveProbe: got.liveProbe, jsonMode: got.jsonMode, verbose: got.verbose, autoRebuy: got.autoRebuy },
-    { dryRun: false, liveProbe: false, jsonMode: false, verbose: false, autoRebuy: false }
+    { dryRun: got.dryRun, liveProbe: got.liveProbe, jsonMode: got.jsonMode, verbose: got.verbose, autoRebuy: got.autoRebuy, allowHighMaxAmount: got.allowHighMaxAmount },
+    { dryRun: false, liveProbe: false, jsonMode: false, verbose: false, autoRebuy: false, allowHighMaxAmount: false }
   );
   assert.equal(got.inputInline, undefined);
   assert.equal(got.inputFile, undefined);
@@ -39,6 +39,13 @@ test("parseRunArgs accepts --max-amount and lists it among known flags", () => {
   assert.equal(got.ok, true);
   assert.equal(got.maxAmount, 0.05);
   assert.equal(got.intent, "weather in tokyo");
+});
+
+test("parseRunArgs accepts --allow-high-max-amount", () => {
+  const got = parseRunArgs(["--allow-high-max-amount", "--max-amount", "3", "weather"]);
+  assert.equal(got.ok, true);
+  assert.equal(got.allowHighMaxAmount, true);
+  assert.equal(got.maxAmount, 3);
 });
 
 test("parseRunArgs rejects a missing, flag-like, or non-positive --max-amount", () => {
@@ -117,7 +124,8 @@ test("selat run --help lists --max-amount", async () => {
   const run = promisify(execFile);
   const r = await run("node", ["bin/selat.mjs", "run", "--help"]);
   assert.match(r.stdout, /--max-amount <usd>/);
-  assert.match(r.stdout, /default \$1/);
+  assert.match(r.stdout, /Hard CLI ceiling \$1/);
+  assert.match(r.stdout, /--allow-high-max-amount/);
 });
 
 test("run --json emits JSON on arg-parse and missing-intent errors", async () => {

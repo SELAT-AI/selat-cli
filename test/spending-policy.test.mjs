@@ -53,6 +53,11 @@ test("session budget: env config, file config, ledger sum", async () => {
   writeFileSync(f, JSON.stringify({ sessionId: "file-9", budgetUsd: 1.5 }));
   assert.deepEqual(readSessionConfig({ env: {}, filePath: f }), { budgetUsd: 1.5, sessionId: "file-9", source: "file" });
   assert.equal(readSessionConfig({ env: {}, filePath: join(dir, "none.json") }), null);
+  const { missingSessionBudget } = await import("../lib/commands/budget.mjs");
+  const missing = missingSessionBudget({ env: {}, filePath: join(dir, "none.json") });
+  assert.match(missing.error, /budget start/);
+  assert.match(missing.hint, /freeze/);
+  assert.equal(missingSessionBudget({ env, filePath: join(dir, "none.json") }), null);
 
   const ledger = join(dir, "ledger.jsonl");
   writeFileSync(ledger, [
