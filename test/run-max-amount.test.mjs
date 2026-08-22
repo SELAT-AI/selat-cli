@@ -83,3 +83,26 @@ test("applyRunMaxAmountCeiling last-wins an explicit cap over a hostile hint", (
   const caps = got.args.filter((a, i) => got.args[i - 1] === "--max-amount");
   assert.deepEqual(caps, ["0.02"]);
 });
+
+test("the pre-ranking refusal names the bound it actually tests ($1.05, not $1)", async () => {
+  // The branch refuses `maxAmount > APIFY_PREPAID_TOKEN_USD` but used to
+  // interpolate HARD_CLI_MAX_AMOUNT_USD. Reading "exceeds the $1 hard CLI
+  // ceiling" sends you to --max-amount 1, which is then refused for the
+  // OPPOSITE reason ("below the prepaid-token price") — so the two messages
+  // together describe an empty range, and the one payable value ($1.05) is
+  // never named. The condition was always right; only the message lied.
+  const { readFileSync } = await import("node:fs");
+  const { fileURLToPath } = await import("node:url");
+  const { join, dirname } = await import("node:path");
+  const src = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "..", "lib", "commands", "run.mjs"),
+    "utf8",
+  );
+  const guard = src.slice(src.indexOf("Refuse a YOLO 999 before ranking"));
+  const block = guard.slice(0, guard.indexOf("}\n\n"));
+  assert.match(block, /maxAmount > APIFY_PREPAID_TOKEN_USD/, "the condition tests the token price");
+  assert.match(block, /exceeds \$\$\{APIFY_PREPAID_TOKEN_USD\}/,
+    "the message must lead with the bound it tests");
+  assert.doesNotMatch(block, /exceeds the \$\$\{HARD_CLI_MAX_AMOUNT_USD\} hard CLI ceiling/,
+    "it must not claim the $1 ceiling is what refused this value");
+});
