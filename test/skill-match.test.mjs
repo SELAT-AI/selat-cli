@@ -31,7 +31,20 @@ const WALLET_DESK_BRIEF = {
     "Who-is-this-wallet brief for one EVM address — Alchemy token-by-address holdings (x402 via Circle Gateway; verify prints routed-x402) plus Arkham intelligence/address attribution (x402 via Circle Gateway; verify prints routed-x402). Read only. Paid per call via selat-pay (USDC via Circle Gateway)."
 };
 
-const REGISTRY = [STOCK_DIRECTION_SIGNALS, PERPLEXITY_SEARCH, WALLET_DESK_BRIEF];
+const FIND_TWITTER_INFLUENCERS = {
+  name: "find-twitter-influencers",
+  rail: "multi/mixed",
+  kind: "multi",
+  description:
+    "Find Twitter/X influencers (Scrape Creators, Fiber, Exa, Brand.dev, Hunter, Tomba). Paid per call via x402 + MPP."
+};
+
+const REGISTRY = [
+  STOCK_DIRECTION_SIGNALS,
+  PERPLEXITY_SEARCH,
+  WALLET_DESK_BRIEF,
+  FIND_TWITTER_INFLUENCERS
+];
 
 // ── scoreSkillMatch ──────────────────────────────────────────────────────────
 
@@ -80,6 +93,42 @@ test("findVettedSkillMatch: returns null when nothing in the registry clears the
 
 test("findVettedSkillMatch: returns null on an empty registry", () => {
   assert.equal(findVettedSkillMatch("is NVDA stock bullish or bearish", []), null);
+});
+
+// ── Generic-verb and boilerplate stopwords ───────────────────────────────────
+// Regression: a throwaway imperative verb ("find") or payment-mechanics
+// boilerplate ("paid per call via MPP") scored full match weight, so an intent
+// with zero domain overlap could clear the threshold on that alone.
+
+test("a generic verb shared with a skill name is not, by itself, a match", () => {
+  // "find a coffee shop near me" scored 4 against find-twitter-influencers
+  // purely on the verb "find" before this was fixed.
+  assert.equal(scoreSkillMatch("find a coffee shop near me", FIND_TWITTER_INFLUENCERS), 0);
+  assert.equal(findVettedSkillMatch("find a coffee shop near me", REGISTRY), null);
+});
+
+test("other generic imperative verbs likewise carry no weight", () => {
+  for (const intent of ["get me a report", "show me the results", "book a table for two"]) {
+    assert.equal(
+      findVettedSkillMatch(intent, REGISTRY),
+      null,
+      `expected no match for ${JSON.stringify(intent)}`
+    );
+  }
+});
+
+test("a real domain term still matches the same skill the generic verb did not", () => {
+  const match = findVettedSkillMatch("find twitter influencers in fintech", REGISTRY);
+  assert.ok(match, "expected a match, got null");
+  assert.equal(match.skill.name, "find-twitter-influencers");
+});
+
+test("payment-mechanics boilerplate is not domain signal", () => {
+  // Every skill description ends with some form of "Paid per call via
+  // x402/MPP…", so these tokens must not let an unrelated payment-flavored
+  // intent match an arbitrary skill.
+  assert.equal(findVettedSkillMatch("what does this cost paid per call", REGISTRY), null);
+  assert.equal(findVettedSkillMatch("pay via mpp on tempo with usdc", REGISTRY), null);
 });
 
 test("findVettedSkillMatch: a higher --threshold can suppress a weak match", () => {
