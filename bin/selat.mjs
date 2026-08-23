@@ -63,7 +63,7 @@ ${fmt.bold("Examples:")}
   selat fund --chain base --amount 2 --method eco       # gasless (Base is the only eco source), no ETH gas needed
 `;
 
-const VERSION = "0.16.5";
+const VERSION = "0.16.6";
 
 async function main(argv) {
   const [, , cmd, ...rest] = argv;
