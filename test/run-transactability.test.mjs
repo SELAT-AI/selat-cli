@@ -61,3 +61,26 @@ test("absent STI block reads as unmeasured, not a failure", () => {
 test("parseTransactabilityIndex returns null on garbled JSON", () => {
   assert.equal(parseTransactabilityIndex("[selat-pay] extensions={not json}\n"), null);
 });
+
+// --- probe argv transform: the dry-run --live-probe seam ----------------------
+
+import { probeArgvFromPayArgs } from "../lib/commands/run.mjs";
+
+test("probeArgvFromPayArgs drops --max-amount and adds --probe-only --live-probe", () => {
+  const pay = ["POST", "https://api.exa.ai/search", "--chain", "base", "--body", "{}", "--max-amount", "0.015"];
+  const probe = probeArgvFromPayArgs(pay);
+  assert.deepEqual(probe, [
+    "POST", "https://api.exa.ai/search", "--chain", "base", "--body", "{}",
+    "--probe-only", "--live-probe",
+  ]);
+  assert.ok(!probe.includes("--max-amount"), "cap must be dropped — a probe never settles");
+});
+
+test("probeArgvFromPayArgs preserves the endpoint/method/body and never double-adds probe flags", () => {
+  const pay = ["GET", "https://x/y", "--chain", "base", "--probe-only", "--live-probe", "--max-amount", "1"];
+  const probe = probeArgvFromPayArgs(pay);
+  assert.equal(probe.filter((a) => a === "--probe-only").length, 1);
+  assert.equal(probe.filter((a) => a === "--live-probe").length, 1);
+  assert.equal(probe[0], "GET");
+  assert.equal(probe[1], "https://x/y");
+});
