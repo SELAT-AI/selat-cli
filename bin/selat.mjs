@@ -37,7 +37,7 @@ ${fmt.bold("Commands:")}
                         compare probes catalog candidates for an intent side-by-side (FREE).
   fund                  Top up your Gateway balance. --wait blocks until the
                         deposit is spendable (credits take ~5–10 min); --method eco sources from
-                        Base (gasless; Circle CLI ≥1.0.0's eco coverage). Offers a browser QR when
+                        Base (faster credit, small fixed fee; every method is gasless). Offers a browser QR when
                         the wallet is empty. --by-chain shows the per-chain routing detail
                         (default: one number).
   history               Show locally recorded Gateway micropayments.
@@ -60,7 +60,7 @@ ${fmt.bold("Examples:")}
   selat skill install twitter-profile-lookup && selat skill run twitter-profile-lookup --handle openai
   selat history
   selat fund --chain base --amount 2 --wait             # block until the deposit is spendable
-  selat fund --chain base --amount 2 --method eco       # gasless (Base is the only eco source), no ETH gas needed
+  selat fund --chain base --amount 2 --method eco       # eco fast deposit (Base is the only eco source; settles on Polygon)
 `;
 
 const VERSION = "0.16.11";
