@@ -1,9 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 import {
   parseSetupPolicyArgs,
   capValueError,
+  quarantineDaysError,
   setupPolicy,
   SETUP_POLICY_HELP,
 } from "../lib/commands/setup-policy.mjs";
@@ -79,7 +83,76 @@ test("non-TTY fails fast with a paste-ready command carrying the given caps", as
 });
 
 test("help text documents every cap flag", () => {
-  for (const f of ["--per-tx", "--daily", "--weekly", "--monthly", "--chain"]) {
+  for (const f of ["--per-tx", "--daily", "--weekly", "--monthly", "--chain", "--quarantine-days"]) {
     assert.ok(SETUP_POLICY_HELP.includes(f), f);
   }
+});
+
+// ── --quarantine-days: local policy, no Circle, no OTP ──────────────────────
+
+const withTempConfig = async (fn) => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "selat-setup-policy-"));
+  const prev = process.env.XDG_CONFIG_HOME;
+  process.env.XDG_CONFIG_HOME = dir;
+  try { return await fn(dir); } finally {
+    if (prev == null) delete process.env.XDG_CONFIG_HOME; else process.env.XDG_CONFIG_HOME = prev;
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+};
+
+test("--quarantine-days parses in both forms", () => {
+  assert.equal(parseSetupPolicyArgs(["--quarantine-days", "14"]).quarantineDays, "14");
+  assert.equal(parseSetupPolicyArgs(["--quarantine-days=7"]).quarantineDays, "7");
+  assert.equal(parseSetupPolicyArgs([]).quarantineDays, undefined);
+  // a following flag is not a value
+  assert.equal(parseSetupPolicyArgs(["--quarantine-days", "--chain"]).quarantineDays, "");
+});
+
+test("quarantineDaysError: whole days 1-90 only", () => {
+  assert.equal(quarantineDaysError("1"), null);
+  assert.equal(quarantineDaysError("30"), null);
+  assert.equal(quarantineDaysError("90"), null);
+  assert.match(quarantineDaysError("0"), /between 1 and 90/);
+  assert.match(quarantineDaysError("91"), /between 1 and 90/);
+  assert.match(quarantineDaysError("14.5"), /whole number/);
+  assert.match(quarantineDaysError("soon"), /whole number/);
+  assert.match(quarantineDaysError(""), /needs a value/);
+  assert.match(quarantineDaysError("--chain"), /needs a value/);
+});
+
+test("--quarantine-days alone: saves to config and exits 0 without Circle, even non-TTY", async () => {
+  await withTempConfig(async (dir) => {
+    const c = capture();
+    try {
+      const code = await setupPolicy(["--quarantine-days", "14"]);
+      assert.equal(code, 0);
+      const cfg = fs.readFileSync(path.join(dir, "selat-pay", ".env"), "utf8");
+      assert.ok(cfg.includes("SELAT_QUARANTINE_DAYS=14"), cfg);
+      assert.ok(c.lines.some((l) => l.includes("quarantine period saved")));
+    } finally { c.restore(); }
+  });
+});
+
+test("--quarantine-days with cap flags non-TTY: config written, Circle gate still errors", async () => {
+  await withTempConfig(async (dir) => {
+    const c = capture();
+    try {
+      const code = await setupPolicy(["--quarantine-days", "7", "--per-tx", "2"]);
+      assert.equal(code, 1); // Circle caps still need the interactive OTP flow
+      const cfg = fs.readFileSync(path.join(dir, "selat-pay", ".env"), "utf8");
+      assert.ok(cfg.includes("SELAT_QUARANTINE_DAYS=7"), cfg);
+      assert.ok(c.lines.join("\n").includes("needs an interactive terminal"));
+    } finally { c.restore(); }
+  });
+});
+
+test("a bad --quarantine-days fails before any write", async () => {
+  await withTempConfig(async (dir) => {
+    const c = capture();
+    try {
+      const code = await setupPolicy(["--quarantine-days", "120"]);
+      assert.equal(code, 1);
+      assert.equal(fs.existsSync(path.join(dir, "selat-pay", ".env")), false);
+    } finally { c.restore(); }
+  });
 });
