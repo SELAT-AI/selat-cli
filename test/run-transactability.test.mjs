@@ -31,7 +31,7 @@ test("formats the canonical Transactability Score line", () => {
   const line = transactabilityLineFromStderr(
     stderrWith({ stats: { "7d": { paidNum: 42, successRate: 0.98 } }, lastPaid: { status: 200 } })
   );
-  assert.equal(line, "✓ Transactability Score · 7d · delivered 2xx 98% · 42 paid · last 200");
+  assert.equal(line, "✓ Transactability Score · 7d 2xx 98% (42 paid) · last 200");
   assert.ok(!line.includes("low confidence"), "42 paid is not a thin sample");
 });
 
@@ -39,14 +39,14 @@ test("annotates low confidence when paidNum is small", () => {
   const line = transactabilityLineFromStderr(
     stderrWith({ stats: { "24h": { paidNum: 1, successRate: 1 } }, lastPaid: { status: 200 } })
   );
-  assert.equal(line, "✓ Transactability Score · 24h · delivered 2xx 100% · 1 paid (low confidence) · last 200");
+  assert.equal(line, "✓ Transactability Score · 24h 2xx 100% (1 paid) · low confidence · last 200");
 });
 
 test("a non-2xx lastPaid is shown as-is, never as a bad badge", () => {
   const line = transactabilityLineFromStderr(
     stderrWith({ stats: { "7d": { paidNum: 8, successRate: 0.7 } }, lastPaid: { status: 503 } })
   );
-  assert.equal(line, "✓ Transactability Score · 7d · delivered 2xx 70% · 8 paid · last 503");
+  assert.equal(line, "✓ Transactability Score · 7d 2xx 70% (8 paid) · last 503");
 });
 
 test("absent STI block reads as unmeasured, not a failure", () => {
