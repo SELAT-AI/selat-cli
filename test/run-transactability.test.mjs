@@ -84,3 +84,72 @@ test("probeArgvFromPayArgs preserves the endpoint/method/body and never double-a
   assert.equal(probe[0], "GET");
   assert.equal(probe[1], "https://x/y");
 });
+
+// --- trace passthrough: quote.transactabilityTrace from probe stdout ----------
+//
+// `selat run --dry-run --live-probe --json` passes the full decision trace
+// through from selat-pay's --probe-only JSON stdout, so machine consumers get
+// it without reaching for the internal selat-pay CLI. These pin the stdout
+// parsing seam. DISPLAY/telemetry only — nothing gates on the trace.
+
+import { transactabilityTraceFromStdout } from "../lib/commands/run.mjs";
+
+// A representative --probe-only stdout: one JSON object whose quote carries
+// the attribution-typed trace (shape owned by selat-pay's
+// buildTransactabilityTrace; we pass it through opaquely).
+const probeStdoutWith = (trace) =>
+  JSON.stringify(
+    {
+      mode: "routed",
+      selectedProtocol: "x402",
+      detected: { protocols: ["x402"] },
+      quote: {
+        quoteId: "q_123",
+        price: { amount: "15000", formatted: "$0.015000 USDC" },
+        network: "base",
+        payTo: "0xabc",
+        scheme: "exact",
+        ...(trace !== undefined ? { transactabilityTrace: trace } : {}),
+      },
+    },
+    null,
+    2
+  ) + "\n";
+
+const SAMPLE_TRACE = {
+  metric: "transactability",
+  version: "1",
+  endpointUrl: "https://api.exa.ai/search",
+  dataStatus: "measured",
+  attribution: {
+    counterparty: {
+      owner: "endpoint",
+      primarySource: "network",
+      signal: "ok",
+      network: { window: "7d", deliveryRate: 0.98, capturedPayments: 42, scope: "network-wide" },
+    },
+  },
+};
+
+test("parses quote.transactabilityTrace out of --probe-only stdout", () => {
+  const trace = transactabilityTraceFromStdout(probeStdoutWith(SAMPLE_TRACE));
+  assert.ok(trace, "expected a trace object");
+  // Passthrough is opaque: the object comes back exactly as selat-pay emitted it.
+  assert.deepEqual(trace, SAMPLE_TRACE);
+});
+
+test("a quote without a trace yields null, not an error", () => {
+  assert.equal(transactabilityTraceFromStdout(probeStdoutWith(undefined)), null);
+});
+
+test("non-JSON, empty, or missing stdout yields null", () => {
+  assert.equal(transactabilityTraceFromStdout("routed free passthrough\n"), null);
+  assert.equal(transactabilityTraceFromStdout(""), null);
+  assert.equal(transactabilityTraceFromStdout(undefined), null);
+  assert.equal(transactabilityTraceFromStdout(null), null);
+});
+
+test("a non-object trace value is rejected, not passed through", () => {
+  assert.equal(transactabilityTraceFromStdout(probeStdoutWith("measured")), null);
+  assert.equal(transactabilityTraceFromStdout(probeStdoutWith(42)), null);
+});
