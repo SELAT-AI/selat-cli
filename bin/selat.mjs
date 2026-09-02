@@ -55,7 +55,7 @@ ${fmt.bold("Options:")}
 ${fmt.bold("Examples:")}
   selat init
   selat search "enrich a person by name and company"   # free discovery, no spend
-  selat skill compare "search the web" --limit 3        # probe candidates side-by-side, free
+  selat skill compare "search the web" --live-probe --limit 3   # probe candidates side-by-side, free
   selat run "summarize the latest news on gold prices"
   selat skill install twitter-profile-lookup && selat skill run twitter-profile-lookup --handle openai
   selat history
