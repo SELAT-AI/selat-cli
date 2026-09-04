@@ -63,7 +63,7 @@ ${fmt.bold("Examples:")}
   selat fund --chain base --amount 2 --method eco       # eco fast deposit (Base is the only eco source; settles on Polygon)
 `;
 
-const VERSION = "0.16.16";
+const VERSION = "0.16.17";
 
 async function main(argv) {
   const [, , cmd, ...rest] = argv;
