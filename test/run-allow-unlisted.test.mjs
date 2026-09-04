@@ -5,7 +5,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { parseRunArgs, rankPickArgv, KNOWN_RUN_FLAGS, pinRefusal } from "../lib/commands/run.mjs";
+import { parseRunArgs, rankPickArgv, KNOWN_RUN_FLAGS, pinRefusal, withDocsCheck } from "../lib/commands/run.mjs";
 
 test("--allow-unlisted is a known flag and parses with --endpoint", () => {
   assert.ok(KNOWN_RUN_FLAGS.includes("--allow-unlisted"));
@@ -33,6 +33,18 @@ test("rankPickArgv forwards --allow-unlisted only alongside a pin", () => {
     rankPickArgv({ intent: "x", endpoint: "https://api.x.dev/v1" }),
     ["x", "--pick", "--endpoint", "https://api.x.dev/v1"],
   );
+});
+
+// The merchant's published docs are the only request contract an unlisted
+// pin has — the paid command must carry --docs-check so selat-pay refuses a
+// body missing a documented-required field before signing.
+test("withDocsCheck appends --docs-check for unlisted pins only, idempotently", () => {
+  const base = ["POST", "https://api.x.dev/v1", "--chain", "base", "--max-amount", "0.1"];
+  assert.deepEqual(withDocsCheck(base, { allowUnlisted: true }), [...base, "--docs-check"]);
+  assert.deepEqual(withDocsCheck(base, { allowUnlisted: false }), base);
+  assert.deepEqual(withDocsCheck(base, {}), base);
+  const already = [...base, "--docs-check"];
+  assert.deepEqual(withDocsCheck(already, { allowUnlisted: true }), already);
 });
 
 test("the not-in-catalog refusal names the flag", () => {
