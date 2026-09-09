@@ -13,7 +13,7 @@
     "start": "node bin/selat.mjs"
   },
   "dependencies": {
-    "@selat-ai/selat-discovery": "^0.24.11",
+    "@selat-ai/selat-discovery": "^0.24.12",
     "@selat-ai/selat-pay": "^0.10.0",
     "qrcode-generator": "2.0.4"
   },
