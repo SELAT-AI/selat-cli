@@ -192,6 +192,8 @@ Without it, the setup ordeal is:
 
 `selat init` checks the required local tools and skill, handles wallet login and creation, and writes the config that `selat-pay` consumes. It does not install global dependencies or clone the skill on your behalf.
 
+It also warms the **capability catalog** once, at install time: the federated catalog is pulled as a single pre-enriched envelope from `catalog.selat.ai` and cached per user, so your first `selat search` / `selat run` — in any directory — starts warm instead of building the catalog from eight registries. `selat doctor` reports which copy is in use, how fresh it is, and how much of it carries request schemas.
+
 ## Configuration
 
 `selat init` writes:
