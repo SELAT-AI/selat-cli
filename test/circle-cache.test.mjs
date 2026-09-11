@@ -241,6 +241,20 @@ const runSelat = (args, extraEnv = {}) =>
 
 // A stale-looking entry that says Base holds the funds; the fake circle says
 // Polygon. Whoever reads live sees Polygon; whoever trusts the cache sees Base.
+const assertUsdc = (actual, expected, msg) =>
+  assert.ok(actual != null && Math.abs(actual - expected) < 1e-9, `${msg} (got ${actual}, want ~${expected})`);
+
+/** The cached USDC figure for one chain, or null when the entry is gone. */
+function cachedChainUsdc(chainKey = "base") {
+  // invalidate removes the file once it is empty, which is itself "no entry".
+  if (!existsSync(cachePath)) return null;
+  const raw = JSON.parse(readFileSync(cachePath, "utf8"));
+  const entry = (raw.entries ?? []).find((e) => e.key === circle.gatewayBalanceCacheKey(ADDR));
+  if (!entry) return null;
+  const row = (entry.value?.perChain ?? []).find((r) => String(r.network).toLowerCase() === chainKey);
+  return row ? Number(row.usdc) : null;
+}
+
 function seedBaseFundedEntry() {
   mkdirSync(join(stateHome, "selat"), { recursive: true });
   writeFileSync(cachePath, JSON.stringify({
@@ -278,18 +292,60 @@ test("`selat doctor` reads live, reports the cache age, and does not consume the
   assert.equal(readCache().entries[0].value.perChain[0].network, "Base");
 });
 
-test("`selat run` steers --chain by the cached balance, then invalidates after the paid attempt", async () => {
+test("`selat run` steers --chain from the cache and DEBITS the cap instead of discarding it", async () => {
+  // The point of the cache is the second call. Dropping the entry after every
+  // payment (the obvious first cut) means run -> pay -> run re-spawns `circle
+  // gateway balance` every time and the cache never pays for itself.
   seedBaseFundedEntry();
   resetLog();
-  const r = await runSelat(["run", "--json", "--max-amount", "0.05", "weather"], {
-    SELAT_SKILL_PATH: join(dir, "skill"),
-    SELAT_PAY_BIN: fakePay,
-    SELAT_PAY_SESSION_PATH: sessionPath
-  });
-  assert.equal(r.code ?? 0, 0, r.stderr);
-  assert.equal(JSON.parse(r.stdout).ok, true, r.stdout);
+  const args = ["run", "--json", "--max-amount", "0.05", "weather"];
+  const env = { SELAT_SKILL_PATH: join(dir, "skill"), SELAT_PAY_BIN: fakePay, SELAT_PAY_SESSION_PATH: sessionPath };
+
+  const first = await runSelat(args, env);
+  assert.equal(first.code ?? 0, 0, first.stderr);
+  assert.equal(JSON.parse(first.stdout).ok, true, first.stdout);
   assert.equal(calls(GW), 0, "the pay-boundary chain resolution must come from the cache");
-  assert.ok(!cachedKeys().includes(circle.gatewayBalanceCacheKey(ADDR)), "payment attempt must drop the balance entry");
+  assertUsdc(cachedChainUsdc("base"), 8.95, "the enforced cap is debited, not the whole entry dropped");
+
+  const second = await runSelat(args, env);
+  assert.equal(second.code ?? 0, 0, second.stderr);
+  assert.equal(calls(GW), 0, "a second paid run must still not spawn circle — that is the whole point");
+  assertUsdc(cachedChainUsdc("base"), 8.9, "each attempt debits again");
+});
+
+test("the debit is conservative and lands BEFORE the payment, so an interrupt cannot leave a pre-spend figure", () => {
+  // --max-amount is a hard pre-signature ceiling, so subtracting it can only
+  // under-state what is left; under-stating merely routes to another funded
+  // chain (or the catalog hint) and can never pick a chain short of the price.
+  seedBaseFundedEntry();
+  assert.equal(circle.debitCachedGatewayBalance(ADDR, "base", 0.05), 1);
+  assertUsdc(cachedChainUsdc("base"), 8.95);
+  // Floors at zero rather than going negative.
+  circle.debitCachedGatewayBalance(ADDR, "base", 999);
+  assert.equal(cachedChainUsdc("base"), 0);
+  // A chain with no row is not silently ignored: re-read rather than guess.
+  seedBaseFundedEntry();
+  assert.equal(circle.debitCachedGatewayBalance(ADDR, "polygon", 0.05), 1);
+  assert.equal(cachedChainUsdc("base"), null, "unknown chain drops the entry");
+  // Nothing to do when the inputs cannot support an accounting decision.
+  seedBaseFundedEntry();
+  assert.equal(circle.debitCachedGatewayBalance(ADDR, "base", 0), 0);
+  assert.equal(circle.debitCachedGatewayBalance(null, "base", 1), 0);
+  assertUsdc(cachedChainUsdc("base"), 9, "no-op inputs leave the entry untouched");
+});
+
+test("debitCachedGatewayBalanceForSpawn reads the operative flags from the argv, last-wins", () => {
+  seedBaseFundedEntry();
+  // selat-pay is last-wins, so a duplicated flag must be read the way it will
+  // be enforced — not the first occurrence.
+  circle.debitCachedGatewayBalanceForSpawn(ADDR, [
+    "GET", "https://x.test", "--chain", "polygon", "--max-amount", "0.99", "--chain", "base", "--max-amount", "0.25",
+  ]);
+  assertUsdc(cachedChainUsdc("base"), 8.75);
+  // No cap or no chain to reason about: invalidate rather than guess.
+  seedBaseFundedEntry();
+  circle.debitCachedGatewayBalanceForSpawn(ADDR, ["node", "apify_token.mjs", "--actor", "x"]);
+  assert.equal(cachedChainUsdc("base"), null, "unknowable spend drops the entry");
 });
 
 test("`selat fund` reads the baseline and post-deposit balance live and invalidates after the deposit", async () => {
@@ -305,7 +361,7 @@ test("`selat fund` reads the baseline and post-deposit balance live and invalida
   assert.ok(!cachedKeys().includes(circle.gatewayBalanceCacheKey(ADDR)), "a completed deposit must drop the balance entry");
 });
 
-test("invokeSkill auto-resolves --chain from the cache and invalidates after each paid step", async () => {
+test("invokeSkill auto-resolves --chain from the cache and debits each paid step", async () => {
   process.env.SELAT_PAY_BIN = fakePay;
   process.env.SELAT_PAY_SESSION_PATH = sessionPath;
   process.env.SELAT_PAY_FREEZE_PATH = join(dir, "no-freeze.json");
@@ -336,9 +392,64 @@ test("invokeSkill auto-resolves --chain from the cache and invalidates after eac
     assert.equal(res.code, 0, JSON.stringify(res.steps));
     assert.ok(stderr.some((l) => /paying on 'base'/.test(l)), "chain came from the seeded cache entry");
     assert.equal(calls(GW), 0);
-    assert.ok(!cachedKeys().includes(circle.gatewayBalanceCacheKey(ADDR)), "each paid step must drop the balance entry");
+    assertUsdc(cachedChainUsdc("base"), 8.95, "each paid step debits its cap, keeping the entry usable");
   } finally {
     delete process.env.SELAT_AGENT_WALLET_ADDRESS;
     cache.invalidateCircleCache();
   }
+});
+
+// ── identity, lifetime, and knob hygiene ───────────────────────────────────
+
+test("an adjustment corrects a value without buying it a fresh lifetime", () => {
+  seedBaseFundedEntry();
+  const before = JSON.parse(readFileSync(cachePath, "utf8")).entries[0].storedAt;
+  circle.debitCachedGatewayBalance(ADDR, "base", 1);
+  const after = JSON.parse(readFileSync(cachePath, "utf8")).entries[0].storedAt;
+  assert.equal(after, before, "storedAt must survive a debit — otherwise a busy agent could renew a stale balance forever");
+});
+
+test("login drops the wallet list AND the balance: a cached listing carries no account identity", async () => {
+  // `circle wallet login <other-email>` switches accounts. init writes the
+  // address it is shown into config, so serving the previous account's
+  // listing here would persist a foreign address.
+  mkdirSync(join(stateHome, "selat"), { recursive: true });
+  writeFileSync(cachePath, JSON.stringify({
+    schema: "selat.circle-cache/v1",
+    entries: [
+      { key: "wallet-list:agent:ETH,BASE", value: { wallets: [{ address: "0xold" }], failures: [] }, storedAt: Date.now() },
+      { key: circle.gatewayBalanceCacheKey(ADDR), value: { total: 9, perChain: [] }, storedAt: Date.now() },
+    ],
+  }));
+  await circle.login("someone@example.com");
+  const keys = cachedKeys();
+  assert.ok(!keys.some((k) => k.startsWith("wallet-list:")), "wallet list must not survive a login");
+  assert.ok(!keys.includes(circle.gatewayBalanceCacheKey(ADDR)), "balance must not survive a login either");
+});
+
+test("a blank SELAT_CIRCLE_CACHE_TTL_MS reads as unset, not as a zero TTL", () => {
+  seedBaseFundedEntry();
+  const prev = process.env.SELAT_CIRCLE_CACHE_TTL_MS;
+  process.env.SELAT_CIRCLE_CACHE_TTL_MS = "   ";
+  try {
+    // Number("   ") === 0 would make every lookup miss while every read still
+    // rewrote the file.
+    assert.equal(cache.circleCacheStatus(circle.gatewayBalanceCacheKey(ADDR)) != null, true);
+    assertUsdc(cachedChainUsdc("base"), 9);
+  } finally {
+    if (prev === undefined) delete process.env.SELAT_CIRCLE_CACHE_TTL_MS;
+    else process.env.SELAT_CIRCLE_CACHE_TTL_MS = prev;
+  }
+});
+
+test("a cached value whose shape this version cannot read back is never stored", async () => {
+  // A future release could change the return shape; init dereferences
+  // .wallets.length and would TypeError on anything else.
+  cache.invalidateCircleCache();
+  const stored = await cache.cachedCall("probe:shape", 60_000, async () => ({ unexpected: true }), {
+    cacheable: (v) => v && Array.isArray(v.wallets),
+    cachePath,
+  });
+  assert.deepEqual(stored, { unexpected: true }, "the caller still gets the live value");
+  assert.ok(!cachedKeys().includes("probe:shape"), "but it is not written to disk");
 });
