@@ -15,8 +15,8 @@ test("KNOWN_RUN_FLAGS includes --max-amount so the parser no longer rejects it",
   assert.ok(KNOWN_RUN_FLAGS.includes("--max-amount"));
 });
 
-test("DEFAULT_RUN_MAX_AMOUNT_USD is the conservative $1 ceiling", () => {
-  assert.equal(DEFAULT_RUN_MAX_AMOUNT_USD, 1);
+test("DEFAULT_RUN_MAX_AMOUNT_USD is the conservative $1.10 ceiling", () => {
+  assert.equal(DEFAULT_RUN_MAX_AMOUNT_USD, 1.1);
 });
 
 test("applyRunMaxAmountCeiling clamps a high catalog hint to the default", () => {
@@ -24,8 +24,8 @@ test("applyRunMaxAmountCeiling clamps a high catalog hint to the default", () =>
     ["GET", "https://api.example/v1", "--chain", "base", "--max-amount", "50"]
   );
   assert.equal(got.ok, true);
-  assert.equal(got.capUsd, 1);
-  assert.deepEqual(got.args.slice(-2), ["--max-amount", "1"]);
+  assert.equal(got.capUsd, 1.1);
+  assert.deepEqual(got.args.slice(-2), ["--max-amount", "1.1"]);
   assert.equal(got.args.filter((a) => a === "--max-amount").length, 1);
 });
 
@@ -42,7 +42,7 @@ test("applyRunMaxAmountCeiling uses the default when the hint has no cap", () =>
   const got = applyRunMaxAmountCeiling(["GET", "https://api.example/v1", "--chain", "base"]);
   assert.equal(got.ok, true);
   assert.equal(got.capUsd, DEFAULT_RUN_MAX_AMOUNT_USD);
-  assert.deepEqual(got.args.slice(-2), ["--max-amount", "1"]);
+  assert.deepEqual(got.args.slice(-2), ["--max-amount", "1.1"]);
 });
 
 test("applyRunMaxAmountCeiling: explicit --max-amount 5 is refused without a TTY raise", () => {
@@ -67,12 +67,29 @@ test("applyRunMaxAmountCeiling strips a hostile second --max-amount (last-wins)"
   const hostile = ["GET", "https://api.example/v1", "--max-amount", "0.05", "--max-amount", "50"];
   const got = applyRunMaxAmountCeiling(hostile);
   assert.equal(got.ok, true);
-  // No explicit flag: last hint cap is 50, clamped to $1.
-  assert.equal(got.capUsd, 1);
+  // No explicit flag: last hint cap is 50, clamped to $1.10.
+  assert.equal(got.capUsd, 1.1);
   const caps = got.args.filter((a, i) => got.args[i - 1] === "--max-amount");
-  assert.deepEqual(caps, ["1"]);
+  assert.deepEqual(caps, ["1.1"]);
   assert.ok(!got.args.includes("50"));
   assert.ok(!got.args.includes("0.05"));
+});
+
+test("applyRunMaxAmountCeiling: explicit $1.10 is allowed; $1.11 is refused", () => {
+  const atCap = applyRunMaxAmountCeiling(
+    ["GET", "https://api.example/v1", "--max-amount", "0.05"],
+    { explicit: 1.1, interactive: false }
+  );
+  assert.equal(atCap.ok, true);
+  assert.equal(atCap.capUsd, 1.1);
+  assert.deepEqual(atCap.args.slice(-2), ["--max-amount", "1.1"]);
+
+  const over = applyRunMaxAmountCeiling(
+    ["GET", "https://api.example/v1", "--max-amount", "0.05"],
+    { explicit: 1.11, interactive: false }
+  );
+  assert.equal(over.ok, false);
+  assert.match(over.reason, /\$1\.1 hard CLI ceiling/);
 });
 
 test("applyRunMaxAmountCeiling last-wins an explicit cap over a hostile hint", () => {
@@ -84,13 +101,9 @@ test("applyRunMaxAmountCeiling last-wins an explicit cap over a hostile hint", (
   assert.deepEqual(caps, ["0.02"]);
 });
 
-test("the pre-ranking refusal names the bound it actually tests ($1.05, not $1)", async () => {
-  // The branch refuses `maxAmount > APIFY_PREPAID_TOKEN_USD` but used to
-  // interpolate HARD_CLI_MAX_AMOUNT_USD. Reading "exceeds the $1 hard CLI
-  // ceiling" sends you to --max-amount 1, which is then refused for the
-  // OPPOSITE reason ("below the prepaid-token price") — so the two messages
-  // together describe an empty range, and the one payable value ($1.05) is
-  // never named. The condition was always right; only the message lied.
+test("the pre-ranking refusal names the hard CLI ceiling ($1.10), not the token price", async () => {
+  // $1.05 now fits under HARD ($1.10), so this gate tests the hard max.
+  // The Apify under-token floor is decided after the pick.
   const { readFileSync } = await import("node:fs");
   const { fileURLToPath } = await import("node:url");
   const { join, dirname } = await import("node:path");
@@ -100,9 +113,9 @@ test("the pre-ranking refusal names the bound it actually tests ($1.05, not $1)"
   );
   const guard = src.slice(src.indexOf("Refuse a YOLO 999 before ranking"));
   const block = guard.slice(0, guard.indexOf("}\n\n"));
-  assert.match(block, /maxAmount > APIFY_PREPAID_TOKEN_USD/, "the condition tests the token price");
-  assert.match(block, /exceeds \$\$\{APIFY_PREPAID_TOKEN_USD\}/,
+  assert.match(block, /maxAmount > HARD_CLI_MAX_AMOUNT_USD/, "the condition tests the hard ceiling");
+  assert.match(block, /exceeds the \$\$\{HARD_CLI_MAX_AMOUNT_USD\} hard CLI ceiling/,
     "the message must lead with the bound it tests");
-  assert.doesNotMatch(block, /exceeds the \$\$\{HARD_CLI_MAX_AMOUNT_USD\} hard CLI ceiling/,
-    "it must not claim the $1 ceiling is what refused this value");
+  assert.doesNotMatch(block, /maxAmount > APIFY_PREPAID_TOKEN_USD/,
+    "token price is a post-pick floor, not this pre-ranking bound");
 });
