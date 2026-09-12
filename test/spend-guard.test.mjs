@@ -14,6 +14,7 @@ import {
   HARD_CLI_MAX_AMOUNT_USD,
   RAISED_CLI_MAX_AMOUNT_USD,
   allowedMaxAmountCeiling,
+  apifyCapBelowTokenError,
   authorizeExplicitMaxAmount,
   confirmHighMaxAmount,
   inAgentHarness,
@@ -29,22 +30,24 @@ import { missingSessionBudget, readSessionConfig } from "../lib/commands/budget.
 const pexec = promisify(execFile);
 const SELAT_BIN = join(dirname(fileURLToPath(import.meta.url)), "..", "bin", "selat.mjs");
 
-test("hard CLI ceiling is $1 for everyone; Apify token is $1.05; raise export aliases $1", () => {
-  assert.equal(HARD_CLI_MAX_AMOUNT_USD, 1);
-  assert.equal(DEFAULT_RUN_MAX_AMOUNT_USD, 1);
+test("hard CLI ceiling is $1.10 for everyone; Apify token is $1.05; raise export aliases $1.10", () => {
+  assert.equal(HARD_CLI_MAX_AMOUNT_USD, 1.1);
+  assert.equal(DEFAULT_RUN_MAX_AMOUNT_USD, 1.1);
   assert.equal(RAISED_CLI_MAX_AMOUNT_USD, HARD_CLI_MAX_AMOUNT_USD);
   assert.equal(APIFY_PREPAID_TOKEN_USD, 1.05);
+  assert.ok(APIFY_PREPAID_TOKEN_USD < HARD_CLI_MAX_AMOUNT_USD,
+    "token price must fit under the hard max so no ceiling exception is needed");
   assert.equal(ALLOW_HIGH_MAX_AMOUNT_FLAG, "--allow-high-max-amount");
   assert.ok(KNOWN_RUN_FLAGS.includes(ALLOW_HIGH_MAX_AMOUNT_FLAG));
   assert.ok(AGENT_HARNESS_ENV_KEYS.includes("CURSOR_AGENT"));
 });
 
-test("allowedMaxAmountCeiling never raises for TTY / allowHigh / harness", () => {
-  assert.equal(allowedMaxAmountCeiling({}), 1);
-  assert.equal(allowedMaxAmountCeiling({ allowHigh: true, interactive: false }), 1);
-  assert.equal(allowedMaxAmountCeiling({ allowHigh: true, interactive: true }), 1);
-  assert.equal(allowedMaxAmountCeiling({ apifyPrepaid: true }), 1.05);
-  assert.equal(allowedMaxAmountCeiling({ apifyPrepaid: true, allowHigh: true, interactive: true }), 1.05);
+test("allowedMaxAmountCeiling never raises for TTY / allowHigh / harness / Apify", () => {
+  assert.equal(allowedMaxAmountCeiling({}), 1.1);
+  assert.equal(allowedMaxAmountCeiling({ allowHigh: true, interactive: false }), 1.1);
+  assert.equal(allowedMaxAmountCeiling({ allowHigh: true, interactive: true }), 1.1);
+  assert.equal(allowedMaxAmountCeiling({ apifyPrepaid: true }), 1.1);
+  assert.equal(allowedMaxAmountCeiling({ apifyPrepaid: true, allowHigh: true, interactive: true }), 1.1);
 });
 
 test("inAgentHarness detects known harness env keys", () => {
@@ -61,7 +64,7 @@ test("inAgentHarness detects known harness env keys", () => {
 test("explicit --max-amount 999 is refused in non-TTY (YOLO clamp)", () => {
   const auth = authorizeExplicitMaxAmount(999, { interactive: false });
   assert.equal(auth.ok, false);
-  assert.match(auth.error, /\$1 hard CLI ceiling/);
+  assert.match(auth.error, /\$1\.1 hard CLI ceiling/);
 
   const got = applyRunMaxAmountCeiling(
     ["GET", "https://api.example/v1", "--max-amount", "0.05"],
@@ -74,55 +77,77 @@ test("explicit --max-amount 999 is refused in non-TTY (YOLO clamp)", () => {
 test("explicit --max-amount 3 is refused even with --allow-high-max-amount", () => {
   const auth = authorizeExplicitMaxAmount(3, { interactive: false, allowHigh: true });
   assert.equal(auth.ok, false);
-  assert.match(auth.error, /\$1 hard CLI ceiling/);
+  assert.match(auth.error, /\$1\.1 hard CLI ceiling/);
   assert.match(auth.hint, /does not raise/);
 });
 
-test("explicit --max-amount at or under $1 is allowed without a raise", () => {
+test("explicit --max-amount at or under $1.10 is allowed without a raise", () => {
   assert.equal(authorizeExplicitMaxAmount(1, { interactive: false }).capUsd, 1);
+  assert.equal(authorizeExplicitMaxAmount(1.05, { interactive: false }).capUsd, 1.05);
+  assert.equal(authorizeExplicitMaxAmount(1.1, { interactive: false }).capUsd, 1.1);
   assert.equal(authorizeExplicitMaxAmount(0.05, { interactive: false }).capUsd, 0.05);
+  assert.equal(authorizeExplicitMaxAmount(1.11, { interactive: false }).ok, false);
 });
 
-test("harness-like + isTTY + --allow-high-max-amount cannot exceed $1", () => {
+test("harness-like + isTTY + --allow-high-max-amount cannot exceed $1.10", () => {
   const harness = { interactive: true, allowHigh: true, agent: true };
   const five = authorizeExplicitMaxAmount(5, harness);
   assert.equal(five.ok, false);
-  assert.match(five.error, /\$1 hard CLI ceiling/);
+  assert.match(five.error, /\$1\.1 hard CLI ceiling/);
   assert.match(five.hint, /TTY and agent harnesses/);
-  assert.equal(authorizeExplicitMaxAmount(1, harness).ok, true);
-  assert.equal(authorizeExplicitMaxAmount(1, harness).capUsd, 1);
+  assert.equal(authorizeExplicitMaxAmount(1.1, harness).ok, true);
+  assert.equal(authorizeExplicitMaxAmount(1.1, harness).capUsd, 1.1);
 });
 
-test("TTY + --allow-high-max-amount still cannot exceed $1 (raise dropped)", () => {
+test("TTY + --allow-high-max-amount still cannot exceed $1.10 (raise dropped)", () => {
   const ok = authorizeExplicitMaxAmount(5, { interactive: true, allowHigh: true });
   assert.equal(ok.ok, false);
-  assert.match(ok.error, /\$1 hard CLI ceiling/);
-  const nope = authorizeExplicitMaxAmount(5.01, { interactive: true, allowHigh: true });
+  assert.match(ok.error, /\$1\.1 hard CLI ceiling/);
+  const nope = authorizeExplicitMaxAmount(1.11, { interactive: true, allowHigh: true });
   assert.equal(nope.ok, false);
 });
 
-test("Apify prepaid $1.05 is allowed on non-TTY; the same 1.05 is refused on x402", () => {
+test("Apify prepaid $1.05 is allowed on non-TTY; the same 1.05 is allowed on x402 under $1.10", () => {
   const apify = authorizeExplicitMaxAmount(1.05, { interactive: false, apifyPrepaid: true });
   assert.equal(apify.ok, true);
   assert.equal(apify.capUsd, 1.05);
-  assert.equal(apify.apifyException, true);
+  assert.equal(apify.apifyException, undefined);
 
   const x402 = authorizeExplicitMaxAmount(1.05, { interactive: false, apifyPrepaid: false });
-  assert.equal(x402.ok, false);
-  assert.match(x402.error, /\$1 hard CLI ceiling/);
+  assert.equal(x402.ok, true);
+  assert.equal(x402.capUsd, 1.05);
 });
 
-test("Apify exception is not a generic hole: 1.06 and 999 still refuse on non-TTY", () => {
-  assert.equal(authorizeExplicitMaxAmount(1.06, { interactive: false, apifyPrepaid: true }).ok, false);
+test("Apify floor: explicit caps below $1.05 refuse; $1.05 and $1.10 work; above $1.10 refuse", () => {
+  const under = authorizeExplicitMaxAmount(1.04, { interactive: false, apifyPrepaid: true });
+  assert.equal(under.ok, false);
+  assert.match(under.error, /prepaid-token purchase is \$1\.05/);
+  assert.match(under.error, /1\.04 is below that/);
+  assert.doesNotMatch(under.error, /hard CLI ceiling/);
+
+  assert.equal(authorizeExplicitMaxAmount(1.05, { apifyPrepaid: true }).ok, true);
+  assert.equal(authorizeExplicitMaxAmount(1.1, { apifyPrepaid: true }).ok, true);
+
+  const over = authorizeExplicitMaxAmount(1.11, { interactive: false, apifyPrepaid: true });
+  assert.equal(over.ok, false);
+  assert.match(over.error, /\$1\.1 hard CLI ceiling/);
   assert.equal(authorizeExplicitMaxAmount(999, { interactive: false, apifyPrepaid: true }).ok, false);
+});
+
+test("apifyCapBelowTokenError is the documented $1.05 floor, not a ceiling", () => {
+  assert.equal(apifyCapBelowTokenError(null), null);
+  assert.equal(apifyCapBelowTokenError(1.05), null);
+  assert.equal(apifyCapBelowTokenError(1.1), null);
+  assert.match(apifyCapBelowTokenError(1), /prepaid-token purchase is \$1\.05/);
+  assert.match(apifyCapBelowTokenError(1.04), /1\.04 is below that/);
 });
 
 test("applyRunMaxAmountCeiling still last-wins then clamps catalog hints", () => {
   const hostile = ["GET", "https://api.example/v1", "--max-amount", "0.05", "--max-amount", "50"];
   const got = applyRunMaxAmountCeiling(hostile);
   assert.equal(got.ok, true);
-  assert.equal(got.capUsd, 1);
-  assert.deepEqual(got.args.slice(-2), ["--max-amount", "1"]);
+  assert.equal(got.capUsd, 1.1);
+  assert.deepEqual(got.args.slice(-2), ["--max-amount", "1.1"]);
 });
 
 test("applyRunMaxAmountCeiling: explicit 0.02 still last-wins over a hostile hint", () => {
@@ -132,7 +157,7 @@ test("applyRunMaxAmountCeiling: explicit 0.02 still last-wins over a hostile hin
   assert.equal(got.capUsd, 0.02);
 });
 
-test("confirmHighMaxAmount: TTY yes still cannot exceed $1", async () => {
+test("confirmHighMaxAmount: TTY yes still cannot exceed $1.10", async () => {
   const yes = await confirmHighMaxAmount({
     explicit: 3,
     interactive: true,
@@ -141,16 +166,16 @@ test("confirmHighMaxAmount: TTY yes still cannot exceed $1", async () => {
     prompt: async () => true,
   });
   assert.equal(yes.ok, false);
-  assert.match(yes.error, /\$1 hard CLI ceiling/);
+  assert.match(yes.error, /\$1\.1 hard CLI ceiling/);
 
   const atCap = await confirmHighMaxAmount({
-    explicit: 1,
+    explicit: 1.1,
     interactive: true,
     prompt: async () => true,
   });
   assert.equal(atCap.ok, true);
   assert.equal(atCap.allowHigh, false);
-  assert.equal(atCap.capUsd, 1);
+  assert.equal(atCap.capUsd, 1.1);
 });
 
 test("authorizeRunMaxAmount: non-TTY 999 refuses", async () => {
@@ -163,7 +188,7 @@ test("authorizeRunMaxAmount: non-TTY 999 refuses", async () => {
   assert.match(got.error, /hard CLI ceiling/);
 });
 
-test("authorizeRunMaxAmount: harness + isTTY + --allow-high-max-amount cannot exceed $1", async () => {
+test("authorizeRunMaxAmount: harness + isTTY + --allow-high-max-amount cannot exceed $1.10", async () => {
   const got = await authorizeRunMaxAmount({
     maxAmount: 5,
     allowHighMaxAmount: true,
@@ -172,7 +197,25 @@ test("authorizeRunMaxAmount: harness + isTTY + --allow-high-max-amount cannot ex
     prompt: async () => true,
   });
   assert.equal(got.ok, false);
-  assert.match(got.error, /\$1 hard CLI ceiling/);
+  assert.match(got.error, /\$1\.1 hard CLI ceiling/);
+});
+
+test("authorizeRunMaxAmount: $1.10 allowed; $1.11 refused; Apify under-token refused", async () => {
+  const atCap = await authorizeRunMaxAmount({ maxAmount: 1.1, interactive: false });
+  assert.equal(atCap.ok, true);
+  assert.equal(atCap.capUsd, 1.1);
+
+  const over = await authorizeRunMaxAmount({ maxAmount: 1.11, interactive: false });
+  assert.equal(over.ok, false);
+  assert.match(over.error, /\$1\.1 hard CLI ceiling/);
+
+  const apifyOk = await authorizeRunMaxAmount({ maxAmount: 1.05, apifyPrepaid: true, interactive: false });
+  assert.equal(apifyOk.ok, true);
+  assert.equal(apifyOk.capUsd, 1.05);
+
+  const apifyUnder = await authorizeRunMaxAmount({ maxAmount: 1, apifyPrepaid: true, interactive: false });
+  assert.equal(apifyUnder.ok, false);
+  assert.match(apifyUnder.error, /prepaid-token purchase is \$1\.05/);
 });
 
 test("missingSessionBudget: absent / env-only refuse; file-armed allows", () => {
@@ -259,7 +302,7 @@ test("file-armed session.json allows the paid path past the budget gate", async 
   assert.match(parsed.error, /skill not found/);
 });
 
-test("harness env + --allow-high-max-amount 5 refuses the $1 ceiling on paid run", async () => {
+test("harness env + --allow-high-max-amount 5 refuses the $1.10 ceiling on paid run", async () => {
   const dir = mkdtempSync(join(tmpdir(), "selat-run-harness-cap-"));
   const session = join(dir, "session.json");
   writeFileSync(session, JSON.stringify({ sessionId: "s-h", budgetUsd: 10 }));
@@ -278,6 +321,36 @@ test("harness env + --allow-high-max-amount 5 refuses the $1 ceiling on paid run
   assert.equal(parsed.ok, false);
   assert.match(parsed.error, /hard CLI ceiling/);
   assert.doesNotMatch(parsed.error, /skill not found|rank\.mjs/);
+});
+
+test("paid run: --max-amount 1.1 passes the hard ceiling; 1.11 is refused before ranking", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "selat-run-hard-cap-"));
+  const session = join(dir, "session.json");
+  writeFileSync(session, JSON.stringify({ sessionId: "s-cap", budgetUsd: 10 }));
+  const env = {
+    ...process.env,
+    SELAT_PAY_SESSION_PATH: session,
+    SELAT_SKILL_PATH: join(dir, "no-such-skill"),
+  };
+  const atCap = await pexec(
+    process.execPath,
+    ["bin/selat.mjs", "run", "--json", "--max-amount", "1.1", "weather"],
+    { env }
+  ).catch((e) => e);
+  const atParsed = JSON.parse(atCap.stdout.trim());
+  assert.equal(atParsed.ok, false);
+  assert.doesNotMatch(atParsed.error, /hard CLI ceiling/);
+  assert.match(atParsed.error, /skill not found/);
+
+  const over = await pexec(
+    process.execPath,
+    ["bin/selat.mjs", "run", "--json", "--max-amount", "1.11", "weather"],
+    { env }
+  ).catch((e) => e);
+  const overParsed = JSON.parse(over.stdout.trim());
+  assert.equal(overParsed.ok, false);
+  assert.match(overParsed.error, /\$1\.1 hard CLI ceiling/);
+  assert.doesNotMatch(overParsed.error, /skill not found|rank\.mjs/);
 });
 
 test("selat budget start writes session.json and is not blocked by missing env", async () => {

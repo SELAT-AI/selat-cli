@@ -124,7 +124,7 @@ test("selat run --help lists --max-amount", async () => {
   const run = promisify(execFile);
   const r = await run("node", ["bin/selat.mjs", "run", "--help"]);
   assert.match(r.stdout, /--max-amount <usd>/);
-  assert.match(r.stdout, /Hard CLI ceiling \$1/);
+  assert.match(r.stdout, /Hard CLI ceiling \$1\.1/);
   assert.match(r.stdout, /--allow-high-max-amount/);
 });
 
