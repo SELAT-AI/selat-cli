@@ -70,7 +70,7 @@ ${fmt.bold("Examples:")}
   selat refund query selatx… --chain base
 `;
 
-const VERSION = "0.17.2";
+const VERSION = "0.17.3";
 
 async function main(argv) {
   const [, , cmd, ...rest] = argv;
