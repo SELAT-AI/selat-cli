@@ -5,6 +5,7 @@
  * Usage:
  *   selat init
  *   selat run "<intent>"
+ *   selat refund claim|query <quote-id> [--chain …]
  *   selat fund --chain base --amount 2 [--method direct|eco] [--wait [--timeout <s>]] [--by-chain]
  *   selat setup-policy
  *   selat doctor
@@ -21,6 +22,7 @@ import { budget } from "../lib/commands/budget.mjs";
 import { freeze, unfreeze } from "../lib/commands/freeze.mjs";
 import { setupPolicy } from "../lib/commands/setup-policy.mjs";
 import { skill } from "../lib/commands/skill.mjs";
+import { refund } from "../lib/commands/refund.mjs";
 import { fmt } from "../lib/ui.mjs";
 import { ensureHarnessPath } from "../lib/host.mjs";
 
@@ -40,6 +42,9 @@ ${fmt.bold("Commands:")}
                         Base (faster credit, small fixed fee; every method is gasless). Offers a browser QR when
                         the wallet is empty. --by-chain shows the per-chain routing detail
                         (default: one number).
+  refund claim|query    File or query a refund claim for a paid selatx… quote
+                        via selat-pay. Auth (SIWx), not a payment — does not
+                        consume session budget or --max-amount.
   history               Show locally recorded Gateway micropayments.
   spend                 Unified spend report: settled spend + Apify token utilization (read-only).
   budget                Show spending caps + remaining budget (read-only; caps are set via setup-policy).
@@ -61,6 +66,8 @@ ${fmt.bold("Examples:")}
   selat history
   selat fund --chain base --amount 2 --wait             # block until the deposit is spendable
   selat fund --chain base --amount 2 --method eco       # eco fast deposit (Base is the only eco source; settles on Polygon)
+  selat refund claim selatx… --chain base
+  selat refund query selatx… --chain base
 `;
 
 const VERSION = "0.17.2";
@@ -93,6 +100,8 @@ async function main(argv) {
       return await skill(rest);
     case "fund":
       return await fund(rest);
+    case "refund":
+      return await refund(rest);
     case "history":
       return await history(rest);
     case "budget":
