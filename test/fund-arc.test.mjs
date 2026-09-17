@@ -1,25 +1,30 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { resolveArcDepositEnv } from "../lib/commands/fund.mjs";
+import { resolveArcDepositEnv, arcDepositSpawnEnv } from "../lib/commands/fund.mjs";
+import { maskedFingerprint } from "../lib/arc-fund-signer.mjs";
 
 // Arc mainnet can't use the Circle agent wallet, so `selat fund --chain arc`
-// deposits with a raw EOA key + a private RPC. These pin that the env those
-// deposits sign with (SELAT_PRIVATE_KEY / ARC_RPC_URL) is resolved with shell
-// env winning over the selat config .env, that eco is rejected, and that a
-// missing credential fails loudly rather than silently falling back to the
-// agent wallet. See the Arc raw-key deposit path (agent-payments).
+// deposits with a raw EOA key + a private RPC. These pin that credentials
+// resolve with shell env winning over the selat config .env, that eco is
+// rejected, and that a missing credential fails loudly rather than silently
+// falling back to the agent wallet. The resolve result is a key-blind wire
+// type (SELAT-AI/selat-cli#189): identity is a fingerprint, not the raw key.
 
 const KEY = "0x" + "ab".repeat(32);
 const RPC = "https://example.arc-mainnet.invalid/token";
 
-test("resolves from shell env", () => {
+test("resolves from shell env without putting the key on the wire type", () => {
   const res = resolveArcDepositEnv({
     method: "direct",
     config: {},
     env: { SELAT_PRIVATE_KEY: KEY, ARC_RPC_URL: RPC },
   });
-  assert.deepEqual(res, { ok: true, env: { SELAT_PRIVATE_KEY: KEY, ARC_RPC_URL: RPC } });
+  assert.equal(res.ok, true);
+  assert.deepEqual(res.env, { ARC_RPC_URL: RPC });
+  assert.equal(res.fingerprint, maskedFingerprint(KEY));
+  assert.equal(res.env.SELAT_PRIVATE_KEY, undefined);
+  assert.equal(JSON.stringify(res).includes(KEY), false);
 });
 
 test("falls back to the selat config when shell env is unset", () => {
@@ -29,18 +34,21 @@ test("falls back to the selat config when shell env is unset", () => {
     env: {},
   });
   assert.ok(res.ok);
-  assert.deepEqual(res.env, { SELAT_PRIVATE_KEY: KEY, ARC_RPC_URL: RPC });
+  assert.deepEqual(res.env, { ARC_RPC_URL: RPC });
+  assert.equal(arcDepositSpawnEnv(res).SELAT_PRIVATE_KEY, KEY);
+  assert.equal(arcDepositSpawnEnv(res).ARC_RPC_URL, RPC);
 });
 
 test("shell env wins over the config .env", () => {
   const res = resolveArcDepositEnv({
     method: "direct",
-    config: { SELAT_PRIVATE_KEY: "0xconfig", ARC_RPC_URL: "https://config.invalid" },
+    config: { SELAT_PRIVATE_KEY: "0x" + "cd".repeat(32), ARC_RPC_URL: "https://config.invalid" },
     env: { SELAT_PRIVATE_KEY: KEY, ARC_RPC_URL: RPC },
   });
   assert.ok(res.ok);
-  assert.equal(res.env.SELAT_PRIVATE_KEY, KEY);
   assert.equal(res.env.ARC_RPC_URL, RPC);
+  assert.equal(arcDepositSpawnEnv(res).SELAT_PRIVATE_KEY, KEY);
+  assert.equal(arcDepositSpawnEnv(res).ARC_RPC_URL, RPC);
 });
 
 test("rejects eco (gasless) on Arc before checking credentials", () => {
@@ -69,6 +77,19 @@ test("names just the one missing credential", () => {
   });
   assert.equal(res.ok, false);
   assert.deepEqual(res.missing, ["ARC_RPC_URL"]);
+});
+
+test("refuses a malformed key without echoing it", () => {
+  const bad = "0xnot-a-key";
+  const res = resolveArcDepositEnv({
+    method: "direct",
+    config: {},
+    env: { SELAT_PRIVATE_KEY: bad, ARC_RPC_URL: RPC },
+  });
+  assert.equal(res.ok, false);
+  assert.match(res.error, /0x-prefixed 32-byte hex/);
+  assert.equal(res.error.includes(bad), false);
+  assert.equal(JSON.stringify(res).includes(bad), false);
 });
 
 test("a valueless --method is an error, not a silent direct deposit", async () => {
