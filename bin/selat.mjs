@@ -25,7 +25,6 @@ import { skill } from "../lib/commands/skill.mjs";
 import { refund } from "../lib/commands/refund.mjs";
 import { fmt } from "../lib/ui.mjs";
 import { ensureHarnessPath } from "../lib/host.mjs";
-import { serializeError } from "../lib/redact.mjs";
 
 const USAGE = `${fmt.bold("selat")} — agent payment setup helper
 
@@ -131,8 +130,7 @@ main(process.argv)
   // flush both streams and exit when the event loop drains.
   .then((code) => { process.exitCode = code ?? 0; })
   .catch((err) => {
-    const safe = serializeError(err);
-    console.error(fmt.error(`fatal: ${safe.message}`));
-    if (process.env.SELAT_DEBUG === "1" && safe.stack) console.error(safe.stack);
+    console.error(fmt.error(`fatal: ${err?.message ?? err}`));
+    if (process.env.SELAT_DEBUG === "1" && err?.stack) console.error(err.stack);
     process.exitCode = 1;
   });
