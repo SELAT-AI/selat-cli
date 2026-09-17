@@ -88,7 +88,13 @@ test("ensureSelatPayHistoryDir honors XDG_STATE_HOME when no explicit path is se
 // ── An override that is a bare binary (no package.json, doesn't run) ─────────
 
 test("a bare override resolves with a null packageRoot and no version claim", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "selat-pay-bare-"));
+  // Nest under an unrelated package.json so a naive "walk until any
+  // package.json" resolver cannot pass this when TMPDIR is /tmp. In-tree
+  // temps (and this decoy) used to resolve to that ancestor and claim its
+  // version as selat-pay.
+  const decoy = mkdtempSync(join(tmpdir(), "selat-pay-decoy-"));
+  writeFileSync(join(decoy, "package.json"), JSON.stringify({ name: "@selat-ai/selat-cli", version: "0.0.0" }));
+  const dir = mkdtempSync(join(decoy, "bare-"));
   const bin = join(dir, "selat-pay.mjs");
   writeFileSync(bin, "process.exit(0);\n");
   const restore = setEnv({ SELAT_PAY_BIN: bin });
