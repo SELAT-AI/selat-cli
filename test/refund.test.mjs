@@ -63,7 +63,7 @@ test("parseRefundArgs keeps remaining flags for passthrough", () => {
     "selatxabc",
     "--chain", "base",
     "--router-url", "https://router.selat.ai",
-    "--raw-key",
+    "--insecure-router",
   ]);
   assert.equal(parsed.ok, true);
   assert.equal(parsed.action, "claim");
@@ -71,7 +71,7 @@ test("parseRefundArgs keeps remaining flags for passthrough", () => {
   assert.deepEqual(parsed.rest, [
     "--chain", "base",
     "--router-url", "https://router.selat.ai",
-    "--raw-key",
+    "--insecure-router",
   ]);
 });
 
