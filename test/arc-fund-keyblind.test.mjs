@@ -37,6 +37,14 @@ const RPC = "https://example.arc-mainnet.invalid/token";
 const ADDRESS = "0x" + "11".repeat(20);
 const SIGNATURE = "0x" + "cd".repeat(65);
 
+function assertNoSecret(haystack, secret, label = "surface") {
+  assert.equal(
+    String(haystack).includes(secret),
+    false,
+    `${label} must not contain the raw secret`
+  );
+}
+
 function quiet(t) {
   const log = console.log;
   const error = console.error;
@@ -48,23 +56,17 @@ function quiet(t) {
   });
 }
 
-function captureStdio(t) {
-  let out = "";
-  const stdout = process.stdout.write;
-  const stderr = process.stderr.write;
-  process.stdout.write = (chunk, ...rest) => {
-    out += String(chunk);
-    return true;
+function memoryStream() {
+  const chunks = [];
+  return {
+    write(chunk) {
+      chunks.push(String(chunk));
+      return true;
+    },
+    toString() {
+      return chunks.join("");
+    }
   };
-  process.stderr.write = (chunk, ...rest) => {
-    out += String(chunk);
-    return true;
-  };
-  t.after(() => {
-    process.stdout.write = stdout;
-    process.stderr.write = stderr;
-  });
-  return () => out;
 }
 
 function withArcFundEnv(t) {
@@ -110,7 +112,7 @@ test("signer wire is signature + address only — no key field", async () => {
   assert.equal("key" in wire, false);
   assert.equal("privateKey" in wire, false);
   assert.equal("mnemonic" in wire, false);
-  assert.doesNotMatch(JSON.stringify(wire), KEY);
+  assertNoSecret(JSON.stringify(wire), KEY, "signer wire");
 });
 
 test("signer wire falls back to a masked fingerprint, never the hex key", async () => {
@@ -124,7 +126,7 @@ test("signer wire falls back to a masked fingerprint, never the hex key", async 
   assert.equal(wire.address, undefined);
   assert.notEqual(wire.fingerprint, KEY);
   assert.doesNotMatch(wire.fingerprint, /0x[0-9a-fA-F]{64}/);
-  assert.doesNotMatch(JSON.stringify(wire), KEY);
+  assertNoSecret(JSON.stringify(wire), KEY, "fingerprint signer wire");
 });
 
 test("toArcFundSignerWire drops an invented key field", () => {
@@ -136,8 +138,8 @@ test("toArcFundSignerWire drops an invented key field", () => {
     mnemonic: MNEMONIC,
   });
   assert.deepEqual(wire, { signature: SIGNATURE, address: ADDRESS });
-  assert.doesNotMatch(JSON.stringify(wire), KEY);
-  assert.doesNotMatch(JSON.stringify(wire), MNEMONIC);
+  assertNoSecret(JSON.stringify(wire), KEY, "sanitized signer wire");
+  assertNoSecret(JSON.stringify(wire), MNEMONIC, "sanitized signer wire");
 });
 
 test("thrown signer errors redact the key before they serialize", async () => {
@@ -151,8 +153,8 @@ test("thrown signer errors redact the key before they serialize", async () => {
     }),
     (err) => {
       const serialized = JSON.stringify(serializeError(err, { secrets: [KEY] }));
-      assert.doesNotMatch(err.message, KEY);
-      assert.doesNotMatch(serialized, KEY);
+      assertNoSecret(err.message, KEY, "thrown signer error");
+      assertNoSecret(serialized, KEY, "serialized signer error");
       assert.match(serialized, new RegExp(REDACTED));
       return true;
     }
@@ -165,7 +167,7 @@ test("upstream 4xx/5xx bodies redact named key fields before serialize", () => {
     body: JSON.stringify({ error: "bad key", privateKey: KEY, key: KEY }),
   });
   const serialized = JSON.stringify(serializeError(err, { secrets: [KEY] }));
-  assert.doesNotMatch(serialized, KEY);
+  assertNoSecret(serialized, KEY, "upstream 5xx serialize");
   assert.match(serialized, /500/);
   assert.match(serialized, new RegExp(REDACTED));
 });
@@ -193,8 +195,8 @@ test("env dump and argv dump and copy-debug bundle never echo the raw key", () =
   assert.equal(dumpedEnv.ARC_RPC_URL, RPC);
   assert.equal(dumpedArgv[dumpedArgv.indexOf("--raw-key") + 1], REDACTED);
   assert.equal("key" in bundle, false);
-  assert.doesNotMatch(blob, KEY);
-  assert.doesNotMatch(blob, MNEMONIC);
+  assertNoSecret(blob, KEY, "copy-debug bundle");
+  assertNoSecret(blob, MNEMONIC, "copy-debug bundle");
 });
 
 test("quote/claim client objects do not invent or keep a key field", () => {
@@ -214,8 +216,8 @@ test("quote/claim client objects do not invent or keep a key field", () => {
   assert.equal("privateKey" in quote, false);
   assert.equal(quote.quoteId, "selatx123");
   assert.equal("mnemonic" in claim, false);
-  assert.doesNotMatch(jsonStringifyRedacted(quote, [KEY]), KEY);
-  assert.doesNotMatch(JSON.stringify(claim), MNEMONIC);
+  assertNoSecret(jsonStringifyRedacted(quote, [KEY]), KEY, "quote wire");
+  assertNoSecret(JSON.stringify(claim), MNEMONIC, "claim wire");
   const payArgv = refundPayArgv({ action: "claim", quoteId: "selatx123", rest: ["--chain", "base"] });
   assert.ok(!payArgv.includes("--raw-key"));
   assert.ok(!payArgv.includes(KEY));
@@ -228,14 +230,14 @@ test("resolveArcDepositEnv JSON and fingerprints stay key-blind", () => {
     env: { SELAT_PRIVATE_KEY: KEY, ARC_RPC_URL: RPC },
   });
   const wire = JSON.stringify(res);
-  assert.doesNotMatch(wire, KEY);
+  assertNoSecret(wire, KEY, "resolveArcDepositEnv JSON");
   assert.equal(JSON.parse(wire).env.SELAT_PRIVATE_KEY, undefined);
   assert.equal(res.fingerprint, maskedFingerprint(KEY));
   // In-process overlay still has the key so setup.mjs can sign — this object
   // is not a wire type and must not be serialized by the CLI.
   const overlay = arcDepositSpawnEnv(res);
   assert.equal(overlay.SELAT_PRIVATE_KEY, KEY);
-  assert.doesNotMatch(JSON.stringify(redactEnvDump(overlay, [KEY])), KEY);
+  assertNoSecret(JSON.stringify(redactEnvDump(overlay, [KEY])), KEY, "redacted overlay dump");
 });
 
 test("reprintRedacted strips a known key from child stdout/stderr", () => {
@@ -243,17 +245,20 @@ test("reprintRedacted strips a known key from child stdout/stderr", () => {
   const stream = { write: (c) => chunks.push(String(c)) };
   reprintRedacted(`ok ${KEY} deposited\n`, stream, [KEY]);
   const text = chunks.join("");
-  assert.doesNotMatch(text, KEY);
+  assertNoSecret(text, KEY, "reprintRedacted stdout");
   assert.match(text, /ok \[redacted\] deposited/);
 });
 
 test("Arc fund reprints child streams key-free (verbose/debug + happy path)", async (t) => {
   quiet(t);
   withArcFundEnv(t);
-  const captured = captureStdio(t);
+  const stdout = memoryStream();
+  const stderr = memoryStream();
   let spawnOpts;
   const code = await fund(["--chain", "arc", "--amount", "0.25", "--yes"], {
     interactive: false,
+    stdout,
+    stderr,
     run: async (_cmd, args, opts) => {
       spawnOpts = { args, opts };
       return {
@@ -264,8 +269,8 @@ test("Arc fund reprints child streams key-free (verbose/debug + happy path)", as
     },
   });
   assert.equal(code, 0);
-  const printed = captured();
-  assert.doesNotMatch(printed, KEY);
+  const printed = stdout.toString() + stderr.toString();
+  assertNoSecret(printed, KEY, "Arc fund stdout/stderr");
   assert.ok(!spawnOpts.args.includes(KEY), "raw key must not appear on deposit argv");
   assert.equal(spawnOpts.opts.inherit, false, "Arc captures streams so they can be redacted");
   assert.equal(spawnOpts.opts.env.SELAT_PRIVATE_KEY, KEY, "in-process child overlay still signs");
@@ -275,9 +280,12 @@ test("Arc fund reprints child streams key-free (verbose/debug + happy path)", as
 test("Arc fund 5xx child output is redacted before it hits stderr", async (t) => {
   quiet(t);
   withArcFundEnv(t);
-  const captured = captureStdio(t);
+  const stdout = memoryStream();
+  const stderr = memoryStream();
   const code = await fund(["--chain", "arc", "--amount", "0.25", "--yes"], {
     interactive: false,
+    stdout,
+    stderr,
     run: async () => ({
       code: 1,
       stdout: "",
@@ -285,11 +293,11 @@ test("Arc fund 5xx child output is redacted before it hits stderr", async (t) =>
     }),
   });
   assert.equal(code, 1);
-  assert.doesNotMatch(captured(), KEY);
+  assertNoSecret(stdout.toString() + stderr.toString(), KEY, "Arc fund 5xx stderr");
 });
 
 test("redactText catches a mnemonic echoed in an error string", () => {
   const text = redactText(`backup phrase: ${MNEMONIC}`, [MNEMONIC]);
-  assert.doesNotMatch(text, MNEMONIC);
+  assertNoSecret(text, MNEMONIC, "mnemonic error string");
   assert.match(text, new RegExp(REDACTED));
 });

@@ -24,7 +24,7 @@ test("resolves from shell env without putting the key on the wire type", () => {
   assert.deepEqual(res.env, { ARC_RPC_URL: RPC });
   assert.equal(res.fingerprint, maskedFingerprint(KEY));
   assert.equal(res.env.SELAT_PRIVATE_KEY, undefined);
-  assert.doesNotMatch(JSON.stringify(res), KEY);
+  assert.equal(JSON.stringify(res).includes(KEY), false);
 });
 
 test("falls back to the selat config when shell env is unset", () => {
@@ -88,8 +88,8 @@ test("refuses a malformed key without echoing it", () => {
   });
   assert.equal(res.ok, false);
   assert.match(res.error, /0x-prefixed 32-byte hex/);
-  assert.doesNotMatch(res.error, bad);
-  assert.doesNotMatch(JSON.stringify(res), bad);
+  assert.equal(res.error.includes(bad), false);
+  assert.equal(JSON.stringify(res).includes(bad), false);
 });
 
 test("a valueless --method is an error, not a silent direct deposit", async () => {

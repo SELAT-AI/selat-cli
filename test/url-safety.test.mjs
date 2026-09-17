@@ -77,5 +77,5 @@ test("resolveArcDepositEnv accepts an https ARC_RPC_URL without putting the key 
   const res = resolveArcDepositEnv({ method: "direct", env });
   assert.equal(res.ok, true);
   assert.deepEqual(res.env, { ARC_RPC_URL: "https://rpc.arc.example" });
-  assert.doesNotMatch(JSON.stringify(res), key);
+  assert.equal(JSON.stringify(res).includes(key), false);
 });
