@@ -64,16 +64,18 @@ test("parseSelatPayHint rejects a hint whose payment url is not https", () => {
 });
 
 test("resolveArcDepositEnv rejects a plaintext ARC_RPC_URL", () => {
-  const env = { SELAT_PRIVATE_KEY: "0xabc", ARC_RPC_URL: "http://rpc.evil.example" };
+  const env = { SELAT_PRIVATE_KEY: "0x" + "ab".repeat(32), ARC_RPC_URL: "http://rpc.evil.example" };
   const res = resolveArcDepositEnv({ method: "direct", env });
   assert.equal(res.ok, false);
   assert.match(res.error, /must be an https:\/\/ URL/);
   assert.equal(res.missing, undefined);
 });
 
-test("resolveArcDepositEnv accepts an https ARC_RPC_URL", () => {
-  const env = { SELAT_PRIVATE_KEY: "0xabc", ARC_RPC_URL: "https://rpc.arc.example" };
+test("resolveArcDepositEnv accepts an https ARC_RPC_URL without putting the key on the wire type", () => {
+  const key = "0x" + "ab".repeat(32);
+  const env = { SELAT_PRIVATE_KEY: key, ARC_RPC_URL: "https://rpc.arc.example" };
   const res = resolveArcDepositEnv({ method: "direct", env });
   assert.equal(res.ok, true);
-  assert.deepEqual(res.env, { SELAT_PRIVATE_KEY: "0xabc", ARC_RPC_URL: "https://rpc.arc.example" });
+  assert.deepEqual(res.env, { ARC_RPC_URL: "https://rpc.arc.example" });
+  assert.doesNotMatch(JSON.stringify(res), key);
 });
