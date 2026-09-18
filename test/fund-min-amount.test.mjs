@@ -30,9 +30,7 @@ test("depositAmountError keeps the positive-number rule first", () => {
   assert.equal(depositAmountError(NaN), "--amount must be a positive number");
 });
 
-test("Arc raw-key deposits are exempt from the CLI floor but not the positive rule", () => {
-  // Arc bypasses the Circle CLI entirely (raw EOA key + private RPC), so the
-  // CLI's floor must not block it.
-  assert.equal(depositAmountError(0.25, { isArc: true }), null);
-  assert.equal(depositAmountError(0, { isArc: true }), "--amount must be a positive number");
+test("no chain is exempt from the CLI floor (Arc deposits go through the CLI too)", () => {
+  assert.match(depositAmountError(0.25), /0\.5 USDC minimum/);
+  assert.equal(depositAmountError(0), "--amount must be a positive number");
 });

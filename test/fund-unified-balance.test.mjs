@@ -62,8 +62,9 @@ test("chain codes are case/whitespace tolerant", () => {
 });
 
 test("returns null for chains the Circle CLI can't address", () => {
-  // Arc mainnet deposits use the raw-EOA path; the QR branch must not fire.
-  assert.equal(circleChainCode("arc"), null);
+  // Arc mainnet is ARC since Circle CLI 1.1.1 — the QR / balance branches
+  // fire there like on any other chain. Solana is still not a Circle chain.
+  assert.equal(circleChainCode("arc"), "ARC");
   assert.equal(circleChainCode("solana"), null);
   assert.equal(circleChainCode(null), null);
   assert.equal(circleChainCode(""), null);

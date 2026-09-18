@@ -152,11 +152,12 @@ test("fund's plan line shows the policy governing the DEPOSIT chain", () => {
     policyPlanLine({ chainKey: "base", policy: CUSTOM_ROW }),
     "on base: capped at $5/tx · $50/day · $200/wk · $500/mo (your custom caps)"
   );
-  // Arc has no Circle chain code → the read degrades to unknown, named as such
-  assert.equal(circleChainCode("arc"), null);
+  // A chain whose policy can't be read degrades to unknown, named as such
+  // (Solana has no Circle chain code; Arc does since CLI 1.1.1).
+  assert.equal(circleChainCode("solana"), null);
   assert.equal(
-    policyPlanLine({ chainKey: "arc", policy: { readable: false, chain: null } }),
-    "on arc: unknown (could not read this chain's policy)"
+    policyPlanLine({ chainKey: "solana", policy: { readable: false, chain: null } }),
+    "on solana: unknown (could not read this chain's policy)"
   );
 });
 
