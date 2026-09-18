@@ -5,6 +5,7 @@ import { existsSync } from "node:fs";
 import { chmod, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { closedEnv } from "./helpers/closed-env.mjs";
 
 import { init, noUsdcHintLines, walletArg, resolveWalletPreset } from "../lib/commands/init.mjs";
 import { ensureSelatPayHistoryDir } from "../lib/selat-pay.mjs";
@@ -120,6 +121,10 @@ test("init reuses configured wallet when Circle wallet listing fails", async () 
     fakeCircle,
     `#!/usr/bin/env bash
 set -euo pipefail
+if [[ "\${1:-}" == "--version" ]]; then
+  printf '1.1.1\\n'
+  exit 0
+fi
 if [[ "\${1:-}" == "wallet" && "\${2:-}" == "status" ]]; then
   printf 'Type:     agent\\nEmail:    test@example.com\\nStatus:   VALID\\n'
   exit 0
@@ -138,14 +143,14 @@ exit 2
     "utf8"
   );
   await chmod(fakeCircle, 0o755);
+  // Belt and braces: the spawned init must never reach the real npm.
+  const fakeNpm = join(binDir, "npm");
+  await writeFile(fakeNpm, "#!/usr/bin/env bash\nprintf 'test fixture: npm must not run (argv: %s)\\n' \"$*\" >&2\nexit 97\n", "utf8");
+  await chmod(fakeNpm, 0o755);
 
   const result = await runNode(["bin/selat.mjs", "init"], {
     cwd: new URL("..", import.meta.url).pathname,
-    env: {
-      ...process.env,
-      XDG_CONFIG_HOME: xdg,
-      PATH: `${binDir}:${process.env.PATH}`
-    }
+    env: closedEnv({ XDG_CONFIG_HOME: xdg }, { bins: [binDir] })
   });
 
   assert.equal(result.code, 0, result.stderr || result.stdout);

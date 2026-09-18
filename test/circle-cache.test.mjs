@@ -6,6 +6,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileS
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { closedEnv } from "./helpers/closed-env.mjs";
 
 // The Circle CLI costs 4–17 s per spawn and `selat run` spawned it before
 // every payment just to pick the funded --chain. lib/circle-cache.mjs keeps
@@ -226,8 +227,7 @@ const pexecFile = promisify(execFile);
 const selatBin = fileURLToPath(new URL("../bin/selat.mjs", import.meta.url));
 const runSelat = (args, extraEnv = {}) =>
   pexecFile(process.execPath, [selatBin, ...args], {
-    env: {
-      ...process.env,
+    env: closedEnv({
       CIRCLE_BIN: fakeCircle,
       XDG_STATE_HOME: stateHome,
       XDG_CONFIG_HOME: configHome,
@@ -236,7 +236,7 @@ const runSelat = (args, extraEnv = {}) =>
       SELAT_PAY_FREEZE_PATH: join(dir, "no-freeze.json"),
       NO_COLOR: "1",
       ...extraEnv
-    }
+    })
   }).catch((e) => e);
 
 // A stale-looking entry that says Base holds the funds; the fake circle says

@@ -6,6 +6,7 @@ import { mkdtempSync, writeFileSync, chmodSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { closedEnv } from "./helpers/closed-env.mjs";
 
 // Design principle, REVISED 2026-08-11: the BALANCE and BUDGET surfaces stay
 // chain-free (Gateway is one balance; the budget rows read identically on
@@ -151,15 +152,14 @@ const pexecFile = promisify(execFile);
 const selatBin = fileURLToPath(new URL("../bin/selat.mjs", import.meta.url));
 
 function budgetEnv() {
-  return {
-    ...process.env,
+  return closedEnv({
     CIRCLE_BIN: fakeCircle,
     SELAT_AGENT_WALLET_ADDRESS: ADDRESS,
     SELAT_PAY_SESSION_PATH: join(dir, "no-session.json"),
     SELAT_PAY_HISTORY_PATH: join(dir, "no-history.jsonl"),
     SELAT_PAY_FREEZE_PATH: join(dir, "no-freeze.json"),
     NO_COLOR: "1"
-  };
+  });
 }
 
 test("`selat budget` renders the true CUSTOM caps with zero chain language", async () => {
