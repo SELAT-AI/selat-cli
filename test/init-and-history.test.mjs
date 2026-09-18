@@ -5,6 +5,7 @@ import { existsSync } from "node:fs";
 import { chmod, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { closedEnv } from "./helpers/closed-env.mjs";
 
 import { init, noUsdcHintLines, walletArg, resolveWalletPreset } from "../lib/commands/init.mjs";
 import { ensureSelatPayHistoryDir } from "../lib/selat-pay.mjs";
@@ -149,11 +150,7 @@ exit 2
 
   const result = await runNode(["bin/selat.mjs", "init"], {
     cwd: new URL("..", import.meta.url).pathname,
-    env: {
-      ...process.env,
-      XDG_CONFIG_HOME: xdg,
-      PATH: `${binDir}:${process.env.PATH}`
-    }
+    env: closedEnv({ XDG_CONFIG_HOME: xdg }, { bins: [binDir] })
   });
 
   assert.equal(result.code, 0, result.stderr || result.stdout);

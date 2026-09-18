@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { tmpdir } from "node:os";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { closedEnv } from "./helpers/closed-env.mjs";
 
 import {
   AGENT_HARNESS_ENV_KEYS,
@@ -254,7 +255,7 @@ test("readSessionConfig: env cannot invent a budget; may lower a file budget", (
 test("paid selat run without a session budget refuses (does not rank or pay)", async () => {
   const dir = mkdtempSync(join(tmpdir(), "selat-run-budget-"));
   const env = {
-    ...process.env,
+    ...closedEnv(),
     SELAT_PAY_SESSION_PATH: join(dir, "no-session.json"),
   };
   delete env.SELAT_SESSION_BUDGET;
@@ -270,7 +271,7 @@ test("paid selat run without a session budget refuses (does not rank or pay)", a
 test("SELAT_SESSION_BUDGET=99999 with no session.json still refuses paid run", async () => {
   const dir = mkdtempSync(join(tmpdir(), "selat-run-env-budget-"));
   const env = {
-    ...process.env,
+    ...closedEnv(),
     SELAT_PAY_SESSION_PATH: join(dir, "no-session.json"),
     SELAT_SESSION_BUDGET: "99999",
     SELAT_SESSION_ID: "spoofed",
@@ -289,7 +290,7 @@ test("file-armed session.json allows the paid path past the budget gate", async 
   const session = join(dir, "session.json");
   writeFileSync(session, JSON.stringify({ sessionId: "s-file", budgetUsd: 2 }));
   const env = {
-    ...process.env,
+    ...closedEnv(),
     SELAT_PAY_SESSION_PATH: session,
     SELAT_SKILL_PATH: join(dir, "no-such-skill"),
   };
@@ -307,7 +308,7 @@ test("harness env + --allow-high-max-amount 5 refuses the $1.10 ceiling on paid 
   const session = join(dir, "session.json");
   writeFileSync(session, JSON.stringify({ sessionId: "s-h", budgetUsd: 10 }));
   const env = {
-    ...process.env,
+    ...closedEnv(),
     SELAT_PAY_SESSION_PATH: session,
     CURSOR_AGENT: "1",
     CLAUDECODE: "1",
@@ -328,7 +329,7 @@ test("paid run: --max-amount 1.1 passes the hard ceiling; 1.11 is refused before
   const session = join(dir, "session.json");
   writeFileSync(session, JSON.stringify({ sessionId: "s-cap", budgetUsd: 10 }));
   const env = {
-    ...process.env,
+    ...closedEnv(),
     SELAT_PAY_SESSION_PATH: session,
     SELAT_SKILL_PATH: join(dir, "no-such-skill"),
   };
@@ -357,7 +358,7 @@ test("selat budget start writes session.json and is not blocked by missing env",
   const dir = mkdtempSync(join(tmpdir(), "selat-budget-start-"));
   const session = join(dir, "session.json");
   const env = {
-    ...process.env,
+    ...closedEnv(),
     SELAT_PAY_SESSION_PATH: session,
   };
   delete env.SELAT_SESSION_BUDGET;
@@ -373,7 +374,7 @@ test("cwd .env with SELAT_SESSION_BUDGET does not arm a paid run", async () => {
   const dir = mkdtempSync(join(tmpdir(), "selat-cwd-env-"));
   writeFileSync(join(dir, ".env"), "SELAT_SESSION_BUDGET=99999\nSELAT_SESSION_ID=cwd\n");
   const env = {
-    ...process.env,
+    ...closedEnv(),
     SELAT_PAY_SESSION_PATH: join(dir, "no-session.json"),
   };
   delete env.SELAT_SESSION_BUDGET;
@@ -387,7 +388,7 @@ test("cwd .env with SELAT_SESSION_BUDGET does not arm a paid run", async () => {
 test("selat run --dry-run does not require a session budget (free preview)", async () => {
   const dir = mkdtempSync(join(tmpdir(), "selat-run-dry-"));
   const env = {
-    ...process.env,
+    ...closedEnv(),
     SELAT_PAY_SESSION_PATH: join(dir, "no-session.json"),
     SELAT_SKILL_PATH: join(dir, "no-such-skill"),
   };

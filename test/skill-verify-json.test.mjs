@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
+import { closedEnv } from "./helpers/closed-env.mjs";
 
 const pexec = promisify(execFile);
 const selatBin = fileURLToPath(new URL("../bin/selat.mjs", import.meta.url));
@@ -15,7 +16,7 @@ const selatBin = fileURLToPath(new URL("../bin/selat.mjs", import.meta.url));
 
 async function run(args) {
   try {
-    const { stdout } = await pexec("node", [selatBin, ...args]);
+    const { stdout } = await pexec(process.execPath, [selatBin, ...args], { env: closedEnv() });
     return { code: 0, stdout };
   } catch (err) {
     return { code: err.code ?? 1, stdout: err.stdout ?? "" };

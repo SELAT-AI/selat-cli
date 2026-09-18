@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
+import { closedEnv } from "./helpers/closed-env.mjs";
 
 import { selatPaySpawn } from "../lib/selat-pay.mjs";
 import {
@@ -28,7 +29,7 @@ function quiet(t) {
 
 async function runBin(args) {
   try {
-    const { stdout, stderr } = await pexec("node", [selatBin, ...args], { input: "" });
+    const { stdout, stderr } = await pexec(process.execPath, [selatBin, ...args], { input: "", env: closedEnv() });
     return { code: 0, stdout, stderr };
   } catch (err) {
     return { code: err.code ?? 1, stdout: err.stdout ?? "", stderr: err.stderr ?? "" };

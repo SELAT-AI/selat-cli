@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { closedEnv } from "./helpers/closed-env.mjs";
 
 import { parseRunArgs, KNOWN_RUN_FLAGS } from "../lib/commands/run.mjs";
 
@@ -122,7 +123,7 @@ test("selat run --help lists --max-amount", async () => {
   const { execFile } = await import("node:child_process");
   const { promisify } = await import("node:util");
   const run = promisify(execFile);
-  const r = await run("node", ["bin/selat.mjs", "run", "--help"]);
+  const r = await run(process.execPath, ["bin/selat.mjs", "run", "--help"], { env: closedEnv() });
   assert.match(r.stdout, /--max-amount <usd>/);
   assert.match(r.stdout, /Hard CLI ceiling \$1\.1/);
   assert.match(r.stdout, /--allow-high-max-amount/);
@@ -133,7 +134,7 @@ test("run --json emits JSON on arg-parse and missing-intent errors", async () =>
   const { promisify } = await import("node:util");
   const run = promisify(execFile);
   for (const argv of [["run", "--json", "--bogus"], ["run", "--json"]]) {
-    const r = await run("node", ["bin/selat.mjs", ...argv]).catch((e) => e);
+    const r = await run(process.execPath, ["bin/selat.mjs", ...argv], { env: closedEnv() }).catch((e) => e);
     const parsed = JSON.parse(r.stdout.trim());
     assert.equal(parsed.ok, false);
     assert.ok(parsed.error.length > 0);
@@ -144,7 +145,7 @@ test("skill run --json emits JSON when the skill is not installed", async () => 
   const { execFile } = await import("node:child_process");
   const { promisify } = await import("node:util");
   const run = promisify(execFile);
-  const r = await run("node", ["bin/selat.mjs", "skill", "run", "nope-not-installed", "--json"]).catch((e) => e);
+  const r = await run(process.execPath, ["bin/selat.mjs", "skill", "run", "nope-not-installed", "--json"], { env: closedEnv() }).catch((e) => e);
   const parsed = JSON.parse(r.stdout.trim());
   assert.equal(parsed.ok, false);
   assert.match(parsed.error, /not installed/);
