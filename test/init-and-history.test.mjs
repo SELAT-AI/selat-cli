@@ -120,6 +120,10 @@ test("init reuses configured wallet when Circle wallet listing fails", async () 
     fakeCircle,
     `#!/usr/bin/env bash
 set -euo pipefail
+if [[ "\${1:-}" == "--version" ]]; then
+  printf '1.1.1\\n'
+  exit 0
+fi
 if [[ "\${1:-}" == "wallet" && "\${2:-}" == "status" ]]; then
   printf 'Type:     agent\\nEmail:    test@example.com\\nStatus:   VALID\\n'
   exit 0
