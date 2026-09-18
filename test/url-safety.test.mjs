@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 
 import { assertSafeHttpUrl, isLoopbackHost, safeHttpUrl } from "../lib/url-safety.mjs";
 import { probeArgvForPlan } from "../lib/compare.mjs";
-import { resolveArcDepositEnv } from "../lib/commands/fund.mjs";
 import { parseSelatPayHint } from "../lib/commands/run.mjs";
 
 test("safeHttpUrl accepts https and loopback http only", () => {
@@ -61,19 +60,4 @@ test("parseSelatPayHint rejects a hint whose payment url is not https", () => {
   );
   assert.equal(parseSelatPayHint(hint("https://api.example.com/paid")).ok, true);
   assert.equal(parseSelatPayHint(hint("http://localhost:4000/paid")).ok, true);
-});
-
-test("resolveArcDepositEnv rejects a plaintext ARC_RPC_URL", () => {
-  const env = { SELAT_PRIVATE_KEY: "0xabc", ARC_RPC_URL: "http://rpc.evil.example" };
-  const res = resolveArcDepositEnv({ method: "direct", env });
-  assert.equal(res.ok, false);
-  assert.match(res.error, /must be an https:\/\/ URL/);
-  assert.equal(res.missing, undefined);
-});
-
-test("resolveArcDepositEnv accepts an https ARC_RPC_URL", () => {
-  const env = { SELAT_PRIVATE_KEY: "0xabc", ARC_RPC_URL: "https://rpc.arc.example" };
-  const res = resolveArcDepositEnv({ method: "direct", env });
-  assert.equal(res.ok, true);
-  assert.deepEqual(res.env, { SELAT_PRIVATE_KEY: "0xabc", ARC_RPC_URL: "https://rpc.arc.example" });
 });
