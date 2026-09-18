@@ -142,6 +142,10 @@ exit 2
     "utf8"
   );
   await chmod(fakeCircle, 0o755);
+  // Belt and braces: the spawned init must never reach the real npm.
+  const fakeNpm = join(binDir, "npm");
+  await writeFile(fakeNpm, "#!/usr/bin/env bash\nprintf 'test fixture: npm must not run (argv: %s)\\n' \"$*\" >&2\nexit 97\n", "utf8");
+  await chmod(fakeNpm, 0o755);
 
   const result = await runNode(["bin/selat.mjs", "init"], {
     cwd: new URL("..", import.meta.url).pathname,
