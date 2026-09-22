@@ -3,12 +3,13 @@ import assert from "node:assert/strict";
 
 import { MIN_CIRCLE_CLI_VERSION, versionAtLeast, circleInstallPlan } from "../lib/circle.mjs";
 
-// The stack needs Circle CLI >= 1.1.1 (first release that lists Arc mainnet).
-// ensureCircle() decides install / upgrade / ok from this pure plan so an
-// existing older install is upgraded instead of silently kept.
+// The stack needs Circle CLI >= 1.1.4 (Circle's wallet-operations backend
+// rejects 1.1.2/1.1.3). ensureCircle() decides install / upgrade / ok from
+// this pure plan so an existing older install is upgraded instead of
+// silently kept.
 
-test("floor is 1.1.1", () => {
-  assert.equal(MIN_CIRCLE_CLI_VERSION, "1.1.1");
+test("floor is 1.1.4", () => {
+  assert.equal(MIN_CIRCLE_CLI_VERSION, "1.1.4");
 });
 
 test("versionAtLeast compares dotted numerics, rejects garbage", () => {
@@ -26,6 +27,6 @@ test("circleInstallPlan: absent → install, old → upgrade, current → ok", (
   assert.equal(circleInstallPlan({ installed: true, version: "1.0.0" }), "upgrade");
   // Unreadable version on an installed binary is treated as old (reinstall).
   assert.equal(circleInstallPlan({ installed: true, version: null }), "upgrade");
-  assert.equal(circleInstallPlan({ installed: true, version: "1.1.1" }), "ok");
+  assert.equal(circleInstallPlan({ installed: true, version: "1.1.4" }), "ok");
   assert.equal(circleInstallPlan({ installed: true, version: "1.3.0" }), "ok");
 });
