@@ -51,13 +51,13 @@ test("missing Circle CLI: init attempts the install without asking", async () =>
 
 test("old Circle CLI: init attempts the upgrade without asking", async () => {
   const r = await runInit(await fixture({ circleVersion: "1.0.0" }));
-  assert.match(r.out, /1\.0\.0 is below the 1\.1\.1 floor — upgrading @circle-fin\/cli@latest/);
+  assert.match(r.out, /1\.0\.0 is below the 1\.1\.4 floor — upgrading @circle-fin\/cli@latest/);
   assert.match(r.out, /installs are disabled/);
   assert.doesNotMatch(r.out, /FAKE-NPM/);
 });
 
 test("current Circle CLI: init leaves it alone", async () => {
-  const r = await runInit(await fixture({ circleVersion: "1.1.1" }));
-  assert.match(r.out, /Circle CLI 1\.1\.1 on PATH/);
+  const r = await runInit(await fixture({ circleVersion: "1.1.4" }));
+  assert.match(r.out, /Circle CLI 1\.1\.4 on PATH/);
   assert.doesNotMatch(r.out, /installing|upgrading|installs are disabled|FAKE-NPM/);
 });

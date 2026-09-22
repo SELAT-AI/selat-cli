@@ -122,7 +122,7 @@ test("init reuses configured wallet when Circle wallet listing fails", async () 
     `#!/usr/bin/env bash
 set -euo pipefail
 if [[ "\${1:-}" == "--version" ]]; then
-  printf '1.1.1\\n'
+  printf '1.1.4\\n'
   exit 0
 fi
 if [[ "\${1:-}" == "wallet" && "\${2:-}" == "status" ]]; then
