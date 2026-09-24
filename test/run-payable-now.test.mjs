@@ -145,3 +145,31 @@ test("the no-runnable-command error names --payable-now, and that retry reaches 
   assert.doesNotMatch(retry.stderr, /Try --payable-now/);
   assert.match(retry.stderr, /--payable-now was already applied/);
 });
+
+// --json contract: this refusal used to print prose to stderr with an empty
+// stdout, which JSON.parse("") turns into a crash at a machine caller. It now
+// goes through the same {ok:false, error} stdout path as every other failure,
+// carrying the retry advice as data.
+test("no-runnable-command under --json is a parseable refusal on stdout with the hint as data", async () => {
+  const run = promisify(execFile);
+  const { env, calls } = fakeSkill({ runnable: false });
+  const first = await run(process.execPath, ["bin/selat.mjs", "run", "--json", "--dry-run", "search recent papers"], { env }).catch((e) => e);
+  assert.equal(first.code, 1);
+  const out = JSON.parse(first.stdout.trim());
+  assert.equal(out.ok, false);
+  assert.match(out.error, /no runnable selat-pay command/);
+  assert.equal(out.reason, "no-runnable-command");
+  assert.equal(out.payableNow, false);
+  assert.match(out.hint, /--payable-now/);
+  assert.equal(out.detail, "missing exec_hints[0]");
+  assert.deepEqual(calls(), [["search recent papers", "--pick"]]);
+
+  const retry = await run(process.execPath, ["bin/selat.mjs", "run", "--json", "--dry-run", "--payable-now", "search recent papers"], { env }).catch((e) => e);
+  assert.equal(retry.code, 1);
+  const again = JSON.parse(retry.stdout.trim());
+  assert.equal(again.ok, false);
+  assert.equal(again.reason, "no-runnable-command");
+  assert.equal(again.payableNow, true);
+  assert.doesNotMatch(again.hint, /Try --payable-now/);
+  assert.deepEqual(calls()[1], ["search recent papers", "--pick", "--payable-now"]);
+});
