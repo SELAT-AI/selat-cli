@@ -26,7 +26,9 @@ const WALLET = "0xb291279be48742f0a1e9ed15c8d6d2d09ea9e4da";
 // --- EIP-681 URI --------------------------------------------------------------
 
 // USDC contracts + chain ids mirror the selat-discovery skill's
-// scripts/chains.mjs registry (Circle-issued USDC per chain).
+// scripts/chains.mjs registry (Circle-issued USDC per chain). Arc mainnet is
+// fundable but has no entry here: USDC is its native gas token, not an ERC-20,
+// so there is no contract to put in an EIP-681 transfer URI (`usdc: null`).
 const EXPECTED_CHAINS = {
   base: [8453, "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"],
   optimism: [10, "0x0b2c639c533813f4aa9d7837caf62653d097ff85"],
@@ -36,6 +38,7 @@ const EXPECTED_CHAINS = {
   avalanche: [43114, "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e"],
   unichain: [130, "0x078d782b760474a361dda0af3839290b0ef57ad6"]
 };
+const NATIVE_USDC_CHAINS = { arc: 5042 };
 
 test("EIP-681 URI carries the right USDC contract and chain id for every fundable chain", () => {
   for (const [key, [chainId, usdc]] of Object.entries(EXPECTED_CHAINS)) {
@@ -45,10 +48,18 @@ test("EIP-681 URI carries the right USDC contract and chain id for every fundabl
       `wrong URI for ${key}`
     );
   }
-  // The registry and the expectation table must cover the same chains.
+  // Native-USDC chains are in the registry with the right chain id but must
+  // never yield an ERC-20 transfer URI (there is no contract to transfer on).
+  for (const [key, chainId] of Object.entries(NATIVE_USDC_CHAINS)) {
+    const chain = FUND_QR_CHAINS.find((c) => c.key === key);
+    assert.equal(chain?.id, chainId, `wrong chain id for ${key}`);
+    assert.equal(chain.usdc, null, `${key} must not carry a USDC contract`);
+    assert.equal(usdcTransferUri({ chainKey: key, address: WALLET, amountUsdc: 2 }), null);
+  }
+  // The registry and the expectation tables must cover the same chains.
   assert.deepEqual(
     FUND_QR_CHAINS.map((c) => c.key).sort(),
-    Object.keys(EXPECTED_CHAINS).sort()
+    [...Object.keys(EXPECTED_CHAINS), ...Object.keys(NATIVE_USDC_CHAINS)].sort()
   );
 });
 
@@ -88,7 +99,7 @@ test("URI amounts are USDC base units (6 decimals)", () => {
 });
 
 test("unknown chains and bad amounts degrade to no URI, never a wrong one", () => {
-  assert.equal(usdcTransferUri({ chainKey: "arc", address: WALLET, amountUsdc: 2 }), null);
+  assert.equal(usdcTransferUri({ chainKey: "celo", address: WALLET, amountUsdc: 2 }), null);
   assert.equal(usdcTransferUri({ chainKey: "", address: WALLET, amountUsdc: 2 }), null);
   assert.equal(usdcTransferUri({ chainKey: "base", address: null, amountUsdc: 2 }), null);
   assert.equal(usdcTransferUri({ chainKey: "base", address: WALLET, amountUsdc: 0 }), null);
@@ -151,8 +162,21 @@ test("funding details always print address/network/token/amount, URI when known"
 });
 
 test("funding details degrade to address-only on an unknown chain (no wrong URI)", () => {
-  const lines = fundingDetailLines({ address: WALLET, chainKey: "arc", shortfall: 2, uri: null });
+  const lines = fundingDetailLines({ address: WALLET, chainKey: "celo", shortfall: 2, uri: null });
   const text = lines.join("\n");
   assert.match(text, new RegExp(`Address\\s+${WALLET}`));
+  assert.match(text, /Network\s+celo$/m);
+  assert.doesNotMatch(text, /URI/);
+});
+
+// Arc is a known, fundable chain whose USDC is native (no ERC-20 contract):
+// the network line still names the chain id, but there is no URI to print.
+test("funding details on Arc name the chain id and stay address-only", () => {
+  const uri = usdcTransferUri({ chainKey: "arc", address: WALLET, amountUsdc: 2 });
+  assert.equal(uri, null);
+  const text = fundingDetailLines({ address: WALLET, chainKey: "arc", shortfall: 2, uri }).join("\n");
+  assert.match(text, new RegExp(`Address\\s+${WALLET}`));
+  assert.match(text, /Network\s+arc \(chain id 5042\)/);
+  assert.match(text, /Token\s+USDC/);
   assert.doesNotMatch(text, /URI/);
 });

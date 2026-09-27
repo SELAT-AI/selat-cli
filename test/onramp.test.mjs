@@ -132,17 +132,22 @@ test("createOnrampSession posts the address and returns the parsed session", asy
   assert.equal(session.widgetUrl, WIDGET);
 });
 
-// Onramp is chain-specific: an UNSCOPED session defaults to USDC on Arc and
-// offers chains (Celo, Linea, Ronin, HyperEVM, …) and tokens (ETH, USDT, …)
-// this CLI has no Gateway deposit path for — a purchase there strands at the
-// address. The default scope must therefore be USDC-only on exactly the
-// chains `selat fund` can deposit from (the widget drops any it doesn't
-// carry, e.g. optimism — verified live 2026-08-11).
+// Onramp is chain-specific: an UNSCOPED session offers chains (Celo, Linea,
+// Ronin, HyperEVM, …) and tokens (ETH, USDT, …) this CLI has no Gateway
+// deposit path for — a purchase there strands at the address. The default
+// scope must therefore be USDC-only on exactly the chains `selat fund` can
+// deposit from (the widget drops any it doesn't carry, e.g. optimism —
+// verified live 2026-08-11). Arc mainnet is a direct deposit source since
+// Circle CLI 1.1.1, so it belongs in the scope (widget carries "USDC on Arc"
+// — verified live 2026-09-27); chains with no deposit path stay out.
 test("default session scope is USDC on the fund-capable chains only", () => {
   assert.deepEqual(ONRAMP_TOKENS, ["USDC"]);
   assert.deepEqual(ONRAMP_CHAIN_KEYS, FUND_QR_CHAINS.map((c) => c.key));
   assert.ok(ONRAMP_CHAIN_KEYS.includes("base"));
-  assert.ok(!ONRAMP_CHAIN_KEYS.includes("arc"));
+  assert.ok(ONRAMP_CHAIN_KEYS.includes("arc"));
+  for (const strandable of ["celo", "linea", "ronin", "hyperevm", "monad"]) {
+    assert.ok(!ONRAMP_CHAIN_KEYS.includes(strandable), `${strandable} must stay out of scope`);
+  }
 });
 
 test("sendUsdcLines carry the address, the chain boundary, and the deposit follow-up", () => {
