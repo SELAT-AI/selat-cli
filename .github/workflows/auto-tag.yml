@@ -1,0 +1,53 @@
+name: Tag release on merge
+
+# Merging a `chore(release): vX.Y.Z` PR tags the merge commit and starts the
+# publish workflow, so nobody has to push the tag by hand.
+#
+# Why dispatch instead of relying on the tag push: tags pushed with the default
+# GITHUB_TOKEN do not trigger other workflows. workflow_dispatch is the exception,
+# so we create the tag with GITHUB_TOKEN and then dispatch publish.yml on it
+# (dry-run=false). Publishing still goes through publish.yml, so npm Trusted
+# Publishing (OIDC) is unchanged. If someone also pushes the tag by hand, the second
+# publish fails harmlessly on "version already exists".
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - package.json
+
+permissions:
+  contents: write   # create the tag
+  actions: write    # dispatch publish.yml
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Tag and publish when this is a release commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          SUBJECT="$(git log -1 --format=%s)"
+          case "$SUBJECT" in
+            chore\(release\):*) ;;
+            *) echo "Not a release commit ($SUBJECT); nothing to tag."; exit 0 ;;
+          esac
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v${VERSION}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "Tag ${TAG} already exists; nothing to do."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "$TAG"
+          git push origin "refs/tags/${TAG}"
+          gh workflow run publish.yml --ref "$TAG" -f dry-run=false
+          echo "Tagged ${TAG} and dispatched publish.yml"
