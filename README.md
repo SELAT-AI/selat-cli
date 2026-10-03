@@ -217,6 +217,15 @@ The `selat-discovery` discovery skill and `selat-pay` ship as npm dependencies, 
 
 ## FAQ
 
+**What does a call cost — is the fee in the quote?**
+Catalog quotes show the upstream merchant's price. Same-rail Gateway
+passthrough settles at par (0%); when the router translates a
+cross-protocol upstream (erc-3009 or tempo-native MPP) it keeps ~5%.
+`selat run` (including `--dry-run` and `--json`) now itemizes this:
+`$0.001 + 5% fee = $0.00105`, with additive `upstreamUsd`, `feeUsd`,
+`totalUsd`, `feePct` JSON fields (`priceUsd` stays the upstream price).
+`selat budget` counts what was actually charged, including the fee.
+
 **Does my wallet expire?**
 No. Never. The on-chain balance and the Circle Gateway balance of your
 wallet have no expiry. Only **Apify prepaid tokens** expire — the Bearer
