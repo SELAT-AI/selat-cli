@@ -185,19 +185,21 @@ test("the `wallet list` fallback of getAgentAddress is cached; a partial listing
   cache.invalidateCircleCache();
   resetLog();
   const LIST = /^wallet list/;
+  // One `wallet list` call per queried chain (BASE ETH ARB OP MATIC AVAX UNI MONAD ARC).
+  const N = 9;
   assert.equal(await circle.getAgentAddress(), ADDR);
-  assert.equal(calls(LIST), 8);
+  assert.equal(calls(LIST), N);
   assert.equal(await circle.getAgentAddress(), ADDR);
-  assert.equal(calls(LIST), 8);
+  assert.equal(calls(LIST), N);
   assert.ok(cachedKeys().some((k) => k.startsWith("wallet-list:agent:")));
 
   await circle.createWallets();
   assert.ok(!cachedKeys().some((k) => k.startsWith("wallet-list:")));
   assert.equal(await circle.getAgentAddress(), ADDR);
-  assert.equal(calls(LIST), 16);
+  assert.equal(calls(LIST), 2 * N);
   // doctor's live listing bypasses the (now warm) entry.
   await circle.listAgentWallets({ cache: false });
-  assert.equal(calls(LIST), 24);
+  assert.equal(calls(LIST), 3 * N);
 
   cache.invalidateCircleCache();
   resetLog();
@@ -206,7 +208,7 @@ test("the `wallet list` fallback of getAgentAddress is cached; a partial listing
     const first = await circle.listAgentWalletsDetailed();
     assert.equal(first.failures.length, 1);
     await circle.listAgentWalletsDetailed();
-    assert.equal(calls(LIST), 16);
+    assert.equal(calls(LIST), 2 * N);
   } finally {
     delete process.env.FAKE_CIRCLE_MODE;
   }

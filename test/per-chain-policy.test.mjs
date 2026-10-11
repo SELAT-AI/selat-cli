@@ -46,7 +46,7 @@ const {
   formatCapList
 } = await import("../lib/circle.mjs");
 const { policyDoctorLines } = await import("../lib/commands/doctor.mjs");
-const { policyPlanLine, circleChainCode, ecoPolygonPolicyNudgeLines } = await import("../lib/commands/fund.mjs");
+const { policyPlanLine, circleChainCode, ecoSettlementPolicyNudgeLines, ECO_SETTLEMENT_CHAIN } = await import("../lib/commands/fund.mjs");
 const { sameCaps, planPolicyWrites, plannedOtpCount, parseSetupPolicyArgs } = await import("../lib/commands/setup-policy.mjs");
 
 const ADDRESS = "0xb291279be48742f0a1e9ed15c8d6d2d09ea9e4da";
@@ -196,23 +196,30 @@ test("setup-policy defaults to every chain (chain: null); --chain scopes one wri
   assert.equal(parseSetupPolicyArgs(["--chain", "arb"]).chain, "ARB");
 });
 
-// Eco settles into Gateway on Polygon; spends from that balance authorize on
-// Polygon, so the completion nudge points there (not the Base/OP/Arb source).
-test("eco Polygon nudge: silent when Polygon already carries a CUSTOM policy", () => {
-  assert.deepEqual(ecoPolygonPolicyNudgeLines({ readable: true, origin: "CUSTOM", chain: "MATIC" }), []);
+// Circle CLI eco deposits settle into Gateway on Arc (verified 2026-10-11 from
+// Base, Arbitrum and Optimism); spends from that balance authorize on Arc, so
+// the completion nudge points there (not the Base/OP/Arb source).
+test("eco settlement chain is Arc and maps to the Circle CLI's ARC code", () => {
+  assert.deepEqual(ECO_SETTLEMENT_CHAIN, { key: "arc", label: "Arc" });
+  assert.equal(circleChainCode(ECO_SETTLEMENT_CHAIN.key), "ARC");
 });
 
-test("eco Polygon nudge: warns when Polygon is on Circle's DEFAULT (uncapped)", () => {
-  const lines = ecoPolygonPolicyNudgeLines({ readable: true, origin: "DEFAULT", chain: "MATIC" });
+test("eco settlement nudge: silent when Arc already carries a CUSTOM policy", () => {
+  assert.deepEqual(ecoSettlementPolicyNudgeLines({ readable: true, origin: "CUSTOM", chain: "ARC" }), []);
+});
+
+test("eco settlement nudge: warns when Arc is on Circle's DEFAULT (uncapped)", () => {
+  const lines = ecoSettlementPolicyNudgeLines({ readable: true, origin: "DEFAULT", chain: "ARC" });
   assert.equal(lines.length, 2);
-  assert.match(lines[0], /settles into Gateway on Polygon.*not the source chain/);
-  assert.match(lines[1], /no custom cap.*selat setup-policy/);
+  assert.match(lines[0], /settles into Gateway on Arc.*not the source chain/);
+  assert.match(lines[1], /no custom cap.*selat setup-policy.*incl\. Arc/);
+  assert.doesNotMatch(lines.join(" "), /Polygon/);
 });
 
-test("eco Polygon nudge: warns (confirm) when Polygon's policy is unreadable", () => {
+test("eco settlement nudge: warns (confirm) when Arc's policy is unreadable", () => {
   for (const pol of [null, { readable: false }]) {
-    const lines = ecoPolygonPolicyNudgeLines(pol);
+    const lines = ecoSettlementPolicyNudgeLines(pol);
     assert.equal(lines.length, 2);
-    assert.match(lines[1], /Couldn't read Polygon's policy.*selat setup-policy/);
+    assert.match(lines[1], /Couldn't read Arc's policy.*selat setup-policy/);
   }
 });

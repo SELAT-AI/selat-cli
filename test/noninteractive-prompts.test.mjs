@@ -40,9 +40,16 @@ test("fund inputs: non-TTY with --amount but no --yes refuses to deposit", () =>
   assert.match(res.error, /--yes/);
 });
 
-test("fund inputs: non-TTY with --amount and --yes proceeds, chain defaults to base", () => {
+test("fund inputs: non-TTY with --amount and --yes proceeds; direct defaults to arc, eco to base", () => {
   const res = resolveFundInputs({ args: ["--amount", "2", "--yes"], interactive: false });
-  assert.deepEqual(res, { ok: true, chain: "base", amount: "2", confirmed: true });
+  assert.deepEqual(res, { ok: true, chain: "arc", amount: "2", confirmed: true });
+  const eco = resolveFundInputs({ args: ["--amount", "2", "--yes"], interactive: false, method: "eco" });
+  assert.equal(eco.chain, "base"); // Arc is not an eco source
+});
+
+test("fund inputs: the --yes refusal names the default chain for the method", () => {
+  assert.match(resolveFundInputs({ args: ["--amount", "2"], interactive: false }).error, /on arc$/);
+  assert.match(resolveFundInputs({ args: ["--amount", "2"], interactive: false, method: "eco" }).error, /on base$/);
 });
 
 test("fund inputs: -y is accepted as --yes and --chain overrides the default", () => {
