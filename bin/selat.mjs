@@ -39,7 +39,8 @@ ${fmt.bold("Commands:")}
                         compare probes catalog candidates for an intent side-by-side (FREE).
   fund                  Top up your Gateway balance. --wait blocks until the
                         deposit is spendable (credits take ~5–10 min); --method eco sources from
-                        Base (faster credit, small fixed fee; every method is gasless). Offers a browser QR when
+                        Base and lands in Gateway on Arc (faster credit, ~$0.03 fixed fee;
+                        every method is gasless). Offers a browser QR when
                         the wallet is empty. --by-chain shows the per-chain routing detail
                         (default: one number).
   refund claim|query    File or query a refund claim for a paid selatx… quote
@@ -65,7 +66,7 @@ ${fmt.bold("Examples:")}
   selat skill install twitter-profile-lookup && selat skill run twitter-profile-lookup --handle openai
   selat history
   selat fund --chain base --amount 2 --wait             # block until the deposit is spendable
-  selat fund --chain base --amount 2 --method eco       # eco fast deposit (Base is the only eco source; settles on Polygon)
+  selat fund --chain base --amount 2 --method eco       # eco fast deposit (Base source; settles into Gateway on Arc)
   selat refund claim selatx… --chain base
   selat refund query selatx… --chain base
 `;
