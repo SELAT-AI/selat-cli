@@ -6,7 +6,7 @@
  *   selat init
  *   selat run "<intent>"
  *   selat refund claim|query <quote-id> [--chain …]
- *   selat fund --chain base --amount 2 [--method direct|eco] [--wait [--timeout <s>]] [--by-chain]
+ *   selat fund --chain arc --amount 2 [--method direct|eco] [--wait [--timeout <s>]] [--by-chain]
  *   selat setup-policy
  *   selat doctor
  */
@@ -65,7 +65,7 @@ ${fmt.bold("Examples:")}
   selat run "summarize the latest news on gold prices"
   selat skill install twitter-profile-lookup && selat skill run twitter-profile-lookup --handle openai
   selat history
-  selat fund --chain base --amount 2 --wait             # block until the deposit is spendable
+  selat fund --chain arc --amount 2 --wait              # direct deposit on Arc (recommended); block until spendable
   selat fund --chain base --amount 2 --method eco       # eco fast deposit (Base source; settles into Gateway on Arc)
   selat refund claim selatx… --chain base
   selat refund query selatx… --chain base

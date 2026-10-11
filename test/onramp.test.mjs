@@ -156,7 +156,8 @@ test("sendUsdcLines carry the address, the chain boundary, and the deposit follo
   assert.match(text, /same address on every listed chain/);
   for (const c of FUND_QR_CHAINS) assert.match(text, new RegExp(c.key));
   assert.match(text, /only these; elsewhere funds can strand/);
-  assert.match(text, /selat fund --amount 2/);
+  assert.match(text, /Recommended: arc/);
+  assert.match(text, /selat fund --chain arc --amount 2/);
 });
 
 test("createOnrampSession fails closed on HTTP errors and bad payloads", async () => {
