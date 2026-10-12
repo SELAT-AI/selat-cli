@@ -1,6 +1,6 @@
 {
   "name": "@selat-ai/selat-cli",
-  "version": "0.17.16",
+  "version": "0.17.17",
   "description": "Setup helper and runner for SELAT agent payments. Bundles the selat-discovery skill and selat-pay as dependencies; checks Circle CLI and config separately.",
   "type": "module",
   "bin": {
@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@selat-ai/selat-discovery": "^0.28.1",
-    "@selat-ai/selat-pay": "^0.12.3",
+    "@selat-ai/selat-pay": "^0.12.4",
     "qrcode-generator": "2.0.4"
   },
   "overrides": {
