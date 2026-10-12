@@ -243,15 +243,34 @@ test("compileStep resolves a chain-less manifest from defaultChain (funded Gatew
   assert.equal(argv[3], "polygon"); // e.g. Eco-funded balance settles on Polygon
 });
 
-test("compileStep precedence: --chain override beats manifest chain beats defaultChain", () => {
+test("compileStep precedence: --chain override beats the funded chain beats a manifest pin", () => {
   // manifest pins base, but an explicit --chain wins.
   const pinned = compileStep({ chain: "base", maxAmount: "0.01" }, step(), {}, { chain: "arbitrum" }, "polygon");
   assert.equal(pinned.argv[3], "arbitrum");
-  // no override: an optional manifest pin still beats the default.
+  // no override: the wallet's funded chain beats the manifest pin (the pay
+  // chain is the Gateway source domain; a manifest can't know the balance).
   const manifestPin = compileStep({ chain: "base", maxAmount: "0.01" }, step(), {}, {}, "polygon");
-  assert.equal(manifestPin.argv[3], "base");
+  assert.equal(manifestPin.argv[3], "polygon");
 });
 
 test("compileStep with no chain anywhere still errors clearly", () => {
   assert.throws(() => compileStep({ maxAmount: "0.01" }, step(), {}), /no chain set/);
+});
+
+test("substitute refuses a dot-segment value in a URL template", async () => {
+  const { substitute } = await import("../lib/skill-registry.mjs");
+  assert.throws(() => substitute("https://x.example/v1/price/${symbol}", { symbol: ".." }, { urlEncode: true }), /dot-segment/);
+  assert.equal(substitute("https://x.example/v1/price/${symbol}", { symbol: "TSLA" }, { urlEncode: true }), "https://x.example/v1/price/TSLA");
+  // bodies aren't URLs: no refusal there
+  assert.equal(substitute("${v}", { v: ".." }, { urlEncode: false }), "..");
+});
+
+test("compileStep: the funded chain outranks a manifest chain pin; --chain outranks both", async () => {
+  const { compileStep } = await import("../lib/skill-registry.mjs");
+  const manifest = { chain: "base", maxAmount: "0.01", steps: [] };
+  const step = { method: "GET", url: "https://x.example/v1/a", maxAmount: "0.01" };
+  const chainOf = (argv) => argv[argv.indexOf("--chain") + 1];
+  assert.equal(chainOf(compileStep(manifest, step, {}, {}, "arc").argv), "arc");
+  assert.equal(chainOf(compileStep(manifest, step, {}, { chain: "polygon" }, "arc").argv), "polygon");
+  assert.equal(chainOf(compileStep(manifest, step, {}, {}, null).argv), "base"); // unfunded: the pin
 });
