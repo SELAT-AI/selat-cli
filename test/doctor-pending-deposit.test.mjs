@@ -9,8 +9,11 @@ import { gatewayPerChainLines, pendingDepositHintLines } from "../lib/commands/d
 test("pendingDepositHintLines fires on a zero balance", () => {
   const lines = pendingDepositHintLines(0);
   assert.equal(lines.length, 2);
-  assert.match(lines[0], /5–10 min/);
   assert.match(lines[0], /isn't lost/);
+  // the timing depends on the route, and doctor can't know which one was used
+  assert.match(lines[0], /on Arc credits within seconds/);
+  assert.match(lines[0], /eco deposit in about a minute/);
+  assert.match(lines[0], /another chain in 5–10 min/);
   assert.match(lines[1], /selat fund --wait/);
   assert.match(lines[1], /circle gateway balance --all/);
 });
