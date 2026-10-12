@@ -305,3 +305,16 @@ test("bracket param key does not crash the :param path-segment form either", () 
   const r = parseParamFlags(["id[0]=7"]);
   assert.doesNotThrow(() => applyParamsToUrl("https://e.x/:id[0]", r.params));
 });
+
+test("a dot-segment value in a path placeholder is refused (it would retarget the paid URL)", async () => {
+  const { applyParamsToUrl, applyParamsToPayArgs } = await import("../lib/run-params.mjs");
+  for (const v of [".", ".."]) {
+    assert.throws(() => applyParamsToUrl("https://api.example.com/v1/users/{id}/profile", [["id", v]]), /dot-segment/);
+    const r = applyParamsToPayArgs(["GET", "https://api.example.com/v1/users/:id/profile", "--chain", "arc"], [["id", v]]);
+    assert.equal(r.ok, false);
+    assert.match(r.reason, /dot-segment/);
+  }
+  // ordinary values and query positions are unaffected
+  assert.equal(applyParamsToUrl("https://api.example.com/v1/users/{id}/profile", [["id", "a.b"]]).url, "https://api.example.com/v1/users/a.b/profile");
+  assert.equal(applyParamsToUrl("https://api.example.com/v1/search", [["q", ".."]]).url, "https://api.example.com/v1/search?q=..");
+});

@@ -71,5 +71,16 @@ test("session budget: file arms, env cannot invent, ledger sum", async () => {
     JSON.stringify({ sessionId: "other", amountUsd: 4 }),
     ""
   ].join("\n"));
-  assert.ok(Math.abs(sessionSpent("t1", { path: ledger }) - 0.015) < 1e-9);
+  assert.ok(Math.abs((await sessionSpent("t1", { path: ledger })) - 0.015) < 1e-9);
+  // Same semantics as selat-pay's enforcement: settle-rejected and resolved
+  // write-ahead rows are not spend (2026-10-11: ten insufficient_balance
+  // refusals showed as $0.16 "spent" while $0.006 had settled).
+  const ledger2 = join(dir, "ledger2.jsonl");
+  writeFileSync(ledger2, [
+    JSON.stringify({ sessionId: "t2", outcome: "settled", amountUsd: 0.006 }),
+    JSON.stringify({ sessionId: "t2", outcome: "submitted", amountUsd: null, pendingAmountUsd: 0.0105, attemptId: "a" }),
+    JSON.stringify({ sessionId: "t2", outcome: "settle-rejected", amountUsd: 0.0105, attemptId: "a" }),
+    ""
+  ].join("\n"));
+  assert.ok(Math.abs((await sessionSpent("t2", { path: ledger2 })) - 0.006) < 1e-9);
 });
