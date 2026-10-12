@@ -37,10 +37,11 @@ ${fmt.bold("Commands:")}
                         --capability <name> scopes ranking to a labeled capability.
   skill <list|run|compare|…> List, install, run, author (new/validate) Selat skills;
                         compare probes catalog candidates for an intent side-by-side (FREE).
-  fund                  Top up your Gateway balance. --wait blocks until the
-                        deposit is spendable (credits take ~5–10 min); --method eco sources from
-                        Base and lands in Gateway on Arc (faster credit, ~$0.03 fixed fee;
-                        every method is gasless). Offers a browser QR when
+  fund                  Top up your Gateway balance. Direct deposits default to Arc.
+                        --wait blocks until the deposit is spendable (seconds on Arc, about
+                        a minute for eco, up to ~5–10 min on other chains); --method eco
+                        sources from Base, Arbitrum or Optimism and lands in Gateway on Arc
+                        (~$0.03 fixed fee; every method is gasless). Offers a browser QR when
                         the wallet is empty. --by-chain shows the per-chain routing detail
                         (default: one number).
   refund claim|query    File or query a refund claim for a paid selatx… quote
@@ -66,7 +67,7 @@ ${fmt.bold("Examples:")}
   selat skill install twitter-profile-lookup && selat skill run twitter-profile-lookup --handle openai
   selat history
   selat fund --chain arc --amount 2 --wait              # direct deposit on Arc (recommended); block until spendable
-  selat fund --chain base --amount 2 --method eco       # eco fast deposit (Base source; settles into Gateway on Arc)
+  selat fund --chain base --amount 2 --method eco       # eco fast deposit (Base, Arbitrum or Optimism source; settles into Gateway on Arc)
   selat refund claim selatx… --chain base
   selat refund query selatx… --chain base
 `;
