@@ -209,7 +209,9 @@ test("selat refund --help prints local usage and exits 0", async () => {
   assert.equal(code, 0);
   assert.match(stdout, /selat refund claim selatx/);
   assert.match(stdout, /selat refund query selatx/);
-  assert.match(stdout, /SIWx/);
+  assert.doesNotMatch(stdout, /SIWx/); // dropped in selat-pay 0.12.1
+  assert.match(stdout, /authenticated request, not a payment/);
+  assert.match(stdout, /Claims are reviewed, and refunds follow\s+capture/);
   assert.match(stdout, /does not consume session/);
   assert.doesNotMatch(stdout + stderr, /selat-pay not found/);
 });

@@ -45,8 +45,9 @@ ${fmt.bold("Commands:")}
                         the wallet is empty. --by-chain shows the per-chain routing detail
                         (default: one number).
   refund claim|query    File or query a refund claim for a paid selatx… quote
-                        via selat-pay. Auth (SIWx), not a payment — does not
-                        consume session budget or --max-amount.
+                        via selat-pay. A signed request, not a payment — does
+                        not consume session budget or --max-amount. Claims are
+                        reviewed; refunds follow capture.
   history               Show locally recorded Gateway micropayments.
   spend                 Unified spend report: settled spend + Apify token utilization (read-only).
   budget                Show spending caps + remaining budget (read-only; caps are set via setup-policy).
