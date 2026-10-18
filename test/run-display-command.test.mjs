@@ -15,6 +15,23 @@ test("dry-run command is a pinned selat run line, never selat-pay", () => {
   assert.ok(cmd.includes("a b") && /'q=a b'|"q=a b"/.test(cmd), "values with spaces are shell-quoted");
 });
 
+test("pins the catalog URL, not the --param-filled one (GET query and templated path)", () => {
+  // GET: the query --param was appended to the pay URL; the pin must be the bare catalog URL.
+  const getArgs = ["GET", "https://x402tap.example/api/weather?city=Singapore", "--max-amount", "0.02"];
+  const get = selatRunDisplayCommand({ intent: "weather", payArgs: getArgs, params: [["city", "Singapore"]], endpointUrl: "https://x402tap.example/api/weather" });
+  assert.ok(get.includes("--endpoint https://x402tap.example/api/weather "), get);
+  assert.ok(!get.includes("?city="), "filled query must not be pinned");
+  assert.ok(get.includes("--param city=Singapore"));
+  // Templated path: the placeholder stays in the pin; the --param re-fills it on the paid run.
+  const tplArgs = ["GET", "https://agentres.example/api/restaurants/42", "--max-amount", "0.05"];
+  const tpl = selatRunDisplayCommand({ intent: "lookup", payArgs: tplArgs, params: [["restaurant_id", "42"]], endpointUrl: "https://agentres.example/api/restaurants/%7Brestaurant_id%7D" });
+  assert.ok(tpl.includes("restaurants/%7Brestaurant_id%7D"), tpl);
+  assert.ok(!tpl.includes("restaurants/42 "));
+  // No plan URL (e.g. an unlisted pin): fall back to the pay argv URL.
+  const fb = selatRunDisplayCommand({ intent: "x", payArgs: tplArgs });
+  assert.ok(fb.includes("--endpoint https://agentres.example/api/restaurants/42"));
+});
+
 test("the chain and the engine body flag are never shown", () => {
   const cmd = selatRunDisplayCommand({ intent: "x", payArgs });
   assert.ok(!cmd.includes("--chain"));
